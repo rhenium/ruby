@@ -708,6 +708,26 @@ class TC_SortedSet < Test::Unit::TestCase
     set << 42
     assert_equal(7, e.size)
   end
+
+  def test_superset
+    set = SortedSet.new([1,2,3])
+
+    assert_equal(false, set.superset?(Set.new([1,2,3,4])))
+    assert_equal(true, set >= SortedSet.new([1,2,3]))
+
+    assert_equal(false, set.proper_superset?(Set.new([1,2,3,4])))
+    assert_equal(false, set > SortedSet.new([1,2,3]))
+  end
+
+  def test_subset
+    set = SortedSet.new([1,2,3])
+
+    assert_equal(true, set.subset?(Set.new([1,2,3,4])))
+    assert_equal(true, set <= SortedSet.new([1,2,3]))
+
+    assert_equal(true, set.proper_subset?(Set.new([1,2,3,4])))
+    assert_equal(false, set < SortedSet.new([1,2,3]))
+  end
 end
 
 class TC_Enumerable < Test::Unit::TestCase
