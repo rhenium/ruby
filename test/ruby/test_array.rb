@@ -756,6 +756,8 @@ class TestArray < Test::Unit::TestCase
   def test_first
     assert_equal(3,   @cls[3, 4, 5].first)
     assert_equal(nil, @cls[].first)
+    assert_equal(2,   @cls[1, 2, 3, 4].first { |i| i.even? })
+    assert_equal(nil, @cls[1, 2, 3, 4].first { |i| i > 100 })
   end
 
   def test_flatten
@@ -1059,6 +1061,8 @@ class TestArray < Test::Unit::TestCase
     assert_equal(nil, @cls[].last)
     assert_equal(1, @cls[1].last)
     assert_equal(99, @cls[*(3..99).to_a].last)
+    assert_equal(3, @cls[1, 2, 3, 4].last { |i| i.odd? })
+    assert_equal(nil, @cls[1, 2, 3, 4].last { |i| i > 100 })
   end
 
   def test_length
@@ -1999,11 +2003,17 @@ class TestArray < Test::Unit::TestCase
   def test_first2
     assert_equal([0], [0].first(2))
     assert_raise(ArgumentError) { [0].first(-1) }
+    assert_equal([2, 4], @cls[1, 2, 4, 6].first(2) { |i| i.even? })
+    assert_equal([2, 4, 6], @cls[2, 4, 5, 6].first(10) { |i| i.even? })
+    assert_raise(ArgumentError) { @cls[1, 2].first(-1) { |i| i.even? } }
   end
 
   def test_last2
     assert_equal([0], [0].last(2))
     assert_raise(ArgumentError) { [0].last(-1) }
+    assert_equal([4, 6], @cls[2, 4, 5, 6].last(2) { |i| i.even? })
+    assert_equal([2, 4, 6], @cls[2, 4, 5, 6].last(10) { |i| i.even? })
+    assert_raise(ArgumentError) { @cls[1, 2].last(-1) { |i| i.even? } }
   end
 
   def test_shift2

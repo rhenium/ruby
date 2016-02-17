@@ -909,22 +909,40 @@ first_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, params))
     UNREACHABLE;
 }
 
+static VALUE
+take_find_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, params))
+{
+    struct MEMO *memo = MEMO_CAST(params);
+    ENUM_WANT_SVALUE();
+    if (RTEST(rb_yield(i))) {
+	rb_ary_push(memo->v1, i);
+	if (!--memo->u3.cnt) rb_iter_break();
+    }
+    return Qnil;
+}
+
 static VALUE enum_take(VALUE obj, VALUE n);
 
 /*
  *  call-seq:
- *     enum.first       ->  obj or nil
- *     enum.first(n)    ->  an_array
+ *     enum.first                    ->  obj or nil
+ *     enum.first    { |obj| block } ->  obj or nil
+ *     enum.first(n)                 ->  an_array
+ *     enum.first(n) { |obj| block } ->  an_array
  *
  *  Returns the first element, or the first +n+ elements, of the enumerable.
  *  If the enumerable is empty, the first form returns <code>nil</code>, and the
  *  second form returns an empty array.
+ *  If a block is given, only elements for which the given block returns a true
+ *  value are counted.
  *
- *    %w[foo bar baz].first     #=> "foo"
- *    %w[foo bar baz].first(2)  #=> ["foo", "bar"]
- *    %w[foo bar baz].first(10) #=> ["foo", "bar", "baz"]
- *    [].first                  #=> nil
- *    [].first(10)              #=> []
+ *    %w[foo bar baz].first            #=> "foo"
+ *    %w[foo bar baz].first(2)         #=> ["foo", "bar"]
+ *    %w[foo bar baz].first(10)        #=> ["foo", "bar", "baz"]
+ *    [].first                         #=> nil
+ *    [].first(10)                     #=> []
+ *    [1,2,3,4].first { |i| i.even? }  #=> 2
+ *    [1,2,2,2].first(2) { |i| i > 1 } #=> [2, 2]
  *
  */
 
@@ -932,17 +950,26 @@ static VALUE
 enum_first(int argc, VALUE *argv, VALUE obj)
 {
     struct MEMO *memo;
+    long len;
     rb_check_arity(argc, 0, 1);
+
     if (argc > 0) {
-	return enum_take(obj, argv[0]);
+	if (!rb_block_given_p()) return enum_take(obj, argv[0]);
+
+	len = NUM2LONG(argv[0]);
+	if (len < 0) rb_raise(rb_eArgError, "attempt to take negative size");
+	if (len == 0) return rb_ary_new2(0);
+
+	memo = MEMO_NEW(rb_ary_new(), 0, len);
+	rb_block_call(obj, id_each, 0, 0, take_find_i, (VALUE)memo);
+	return memo->v1;
     }
     else {
 	memo = MEMO_NEW(Qnil, 0, 0);
-	rb_block_call(obj, id_each, 0, 0, first_i, (VALUE)memo);
+	rb_block_call(obj, id_each, 0, 0, rb_block_given_p() ? find_i : first_i, (VALUE)memo);
 	return memo->v1;
     }
 }
-
 
 /*
  *  call-seq:

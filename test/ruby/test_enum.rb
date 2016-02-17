@@ -267,6 +267,8 @@ class TestEnumerable < Test::Unit::TestCase
     assert_equal([1, 2, 3], @obj.first(3))
     assert_nil(@empty.first)
     assert_equal([], @empty.first(10))
+    assert_equal(2, @obj.first { |i| i.even? })
+    assert_equal([3], @obj.first(2) { |i| i > 2 })
 
     bug5801 = '[ruby-dev:45041]'
     assert_in_out_err([], <<-'end;', [], /unexpected break/, bug5801)

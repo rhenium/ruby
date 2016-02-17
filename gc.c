@@ -6094,7 +6094,9 @@ void
 rb_gc_register_mark_object(VALUE obj)
 {
     VALUE ary_ary = GET_THREAD()->vm->mark_object_ary;
-    VALUE ary = rb_ary_last(0, 0, ary_ary);
+    VALUE ary = Qnil;
+    if (RARRAY_LEN(ary_ary))
+	ary = RARRAY_AREF(ary_ary, RARRAY_LEN(ary_ary) - 1);
 
     if (ary == Qnil || RARRAY_LEN(ary) >= MARK_OBJECT_ARY_BUCKET_SIZE) {
 	ary = rb_ary_tmp_new(MARK_OBJECT_ARY_BUCKET_SIZE);

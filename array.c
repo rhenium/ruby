@@ -1310,56 +1310,117 @@ rb_ary_at(VALUE ary, VALUE pos)
 
 /*
  *  call-seq:
- *     ary.first     ->   obj or nil
- *     ary.first(n)  ->   new_ary
+ *     ary.first                    ->  obj or nil
+ *     ary.first    { |obj| block } ->  obj or nil
+ *     ary.first(n)                 ->  new_ary
+ *     ary.first(n) { |obj| block } ->  new_ary
  *
  *  Returns the first element, or the first +n+ elements, of the array.
- *  If the array is empty, the first form returns +nil+, and the
- *  second form returns an empty array. See also Array#last for
- *  the opposite effect.
+ *  If the array is empty, the first form returns +nil+, and the second form
+ *  returns an empty array.
+ *  If a block is given, only elements for which the given block returns a true
+ *  value are counted.
  *
- *     a = [ "q", "r", "s", "t" ]
- *     a.first     #=> "q"
- *     a.first(2)  #=> ["q", "r"]
+ *  See also Array#last for the opposite effect.
+ *
+ *     a = [ "q", "r", "s", "t", "aa" ]
+ *     a.first                    #=> "q"
+ *     a.first(2)                 #=> ["q", "r"]
+ *     a.first { |i| i.size > 1 } #=> "aa"
  */
 
 static VALUE
 rb_ary_first(int argc, VALUE *argv, VALUE ary)
 {
-    if (argc == 0) {
-	if (RARRAY_LEN(ary) == 0) return Qnil;
-	return RARRAY_AREF(ary, 0);
+    if (!rb_block_given_p()) {
+	if (argc == 0) {
+	    if (RARRAY_LEN(ary) == 0) return Qnil;
+	    return RARRAY_AREF(ary, 0);
+	}
+	else {
+	    return ary_take_first_or_last(argc, argv, ary, ARY_TAKE_FIRST);
+	}
     }
     else {
-	return ary_take_first_or_last(argc, argv, ary, ARY_TAKE_FIRST);
+	long i;
+	if (argc == 0) {
+	    for (i = 0; i < RARRAY_LEN(ary); i++) {
+		if (RTEST(rb_yield(RARRAY_AREF(ary, i))))
+		    return RARRAY_AREF(ary, i);
+	    }
+	    return Qnil;
+	}
+	else {
+	    long take = NUM2LONG(argv[0]);
+	    VALUE result = rb_ary_new();;
+	    if (take < 0) rb_raise(rb_eArgError, "attempt to take negative size");
+	    if (take == 0) return rb_ary_new2(0);
+	    for (i = 0; i < RARRAY_LEN(ary); i++) {
+		if (RTEST(rb_yield(RARRAY_AREF(ary, i)))) {
+		    rb_ary_push(result, RARRAY_AREF(ary, i));
+		    if (!--take) break;
+		}
+	    }
+	    return result;
+	}
     }
 }
 
 /*
  *  call-seq:
- *     ary.last     ->  obj or nil
- *     ary.last(n)  ->  new_ary
+ *     ary.last                    ->  obj or nil
+ *     ary.last    { |obj| block } ->  obj or nil
+ *     ary.last(n)                 ->  new_ary
+ *     ary.last(n) { |obj| block } ->  new_ary
  *
- *  Returns the last element(s) of +self+. If the array is empty,
- *  the first form returns +nil+.
+ *  Returns the last element(s) of +self+. If the array is empty, the first
+ *  form returns +nil+.
+ *  If a block is given, only elements for which the given block returns a true
+ *  value are counted.
  *
  *  See also Array#first for the opposite effect.
  *
- *     a = [ "w", "x", "y", "z" ]
- *     a.last     #=> "z"
- *     a.last(2)  #=> ["y", "z"]
+ *     a = [ "w", "x", "y", "z", "aa" ]
+ *     a.last                     #=> "aa"
+ *     a.last(2)                  #=> ["z", "aa"]
+ *     a.last { |i| i.size == 1 } #=> "x"
  */
 
 VALUE
 rb_ary_last(int argc, const VALUE *argv, VALUE ary)
 {
-    if (argc == 0) {
-	long len = RARRAY_LEN(ary);
-	if (len == 0) return Qnil;
-	return RARRAY_AREF(ary, len-1);
+    if (!rb_block_given_p()) {
+	if (argc == 0) {
+	    long len = RARRAY_LEN(ary);
+	    if (len == 0) return Qnil;
+	    return RARRAY_AREF(ary, len-1);
+	}
+	else {
+	    return ary_take_first_or_last(argc, argv, ary, ARY_TAKE_LAST);
+	}
     }
     else {
-	return ary_take_first_or_last(argc, argv, ary, ARY_TAKE_LAST);
+	long i;
+	if (argc == 0) {
+	    for (i = RARRAY_LEN(ary); --i >= 0; ) {
+		if (RTEST(rb_yield(RARRAY_AREF(ary, i))))
+		    return RARRAY_AREF(ary, i);
+	    }
+	    return Qnil;
+	}
+	else {
+	    long take = NUM2LONG(argv[0]);
+	    VALUE result = rb_ary_new();;
+	    if (take < 0) rb_raise(rb_eArgError, "attempt to take negative size");
+	    if (take == 0) return rb_ary_new2(0);
+	    for (i = RARRAY_LEN(ary); --i >= 0; ) {
+		if (RTEST(rb_yield(RARRAY_AREF(ary, i)))) {
+		    rb_ary_push(result, RARRAY_AREF(ary, i));
+		    if (!--take) break;
+		}
+	    }
+	    return rb_ary_reverse(result);
+	}
     }
 }
 

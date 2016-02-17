@@ -271,6 +271,10 @@ class TestRange < Test::Unit::TestCase
     assert_equal("a", ("a".."c").first)
     assert_equal("c", ("a".."c").last)
     assert_equal(0, (2..0).last)
+    assert_equal(1, (0..11).first { |i| i.odd? })
+    assert_equal(11, (0..11).last { |i| i.odd? })
+    assert_equal([1, 3], (0..11).first(2) { |i| i.odd? })
+    assert_equal([9, 11], (0..11).last(2) { |i| i.odd? })
 
     assert_equal([0, 1, 2], (0...10).first(3))
     assert_equal([7, 8, 9], (0...10).last(3))
@@ -279,6 +283,10 @@ class TestRange < Test::Unit::TestCase
     assert_equal("a", ("a"..."c").first)
     assert_equal("c", ("a"..."c").last)
     assert_equal(0, (2...0).last)
+    assert_equal(1, (0...11).first { |i| i.odd? })
+    assert_equal(9, (0...11).last { |i| i.odd? })
+    assert_equal([1, 3], (0...11).first(2) { |i| i.odd? })
+    assert_equal([7, 9], (0...11).last(2) { |i| i.odd? })
   end
 
   def test_to_s

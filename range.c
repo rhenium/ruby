@@ -851,14 +851,20 @@ first_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, cbarg))
 
 /*
  *  call-seq:
- *     rng.first    -> obj
- *     rng.first(n) -> an_array
+ *     rng.first                    -> obj
+ *     rng.first   { |obj| block }  -> obj
+ *     rng.first(n)                 -> an_array
+ *     rng.first(n) { |obj| block } -> an_array
  *
  *  Returns the first object in the range, or an array of the first +n+
  *  elements.
+ *  If a block is given, only elements for which the given block returns a true
+ *  value are counted.
  *
- *    (10..20).first     #=> 10
- *    (10..20).first(3)  #=> [10, 11, 12]
+ *    (10..20).first                   #=> 10
+ *    (10..20).first { |i| i.odd? }    #=> 11
+ *    (10..20).first(3)                #=> [10, 11, 12]
+ *    (10..20).first(3) { |i| i.odd? } #=> [11, 13, 15]
  */
 
 static VALUE
@@ -866,6 +872,7 @@ range_first(int argc, VALUE *argv, VALUE range)
 {
     VALUE n, ary[2];
 
+    if (rb_block_given_p()) return rb_call_super(argc, argv);
     if (argc == 0) return RANGE_BEG(range);
 
     rb_scan_args(argc, argv, "1", &n);
@@ -879,26 +886,36 @@ range_first(int argc, VALUE *argv, VALUE range)
 
 /*
  *  call-seq:
- *     rng.last    -> obj
- *     rng.last(n) -> an_array
+ *     rng.last                    -> obj
+ *     rng.last   { |obj| block }  -> obj
+ *     rng.last(n)                 -> an_array
+ *     rng.last(n) { |obj| block } -> an_array
  *
  *  Returns the last object in the range,
  *  or an array of the last +n+ elements.
+ *  If a block is given, only elements for which the given block returns a true
+ *  value are counted.
  *
- *  Note that with no arguments +last+ will return the object that defines
- *  the end of the range even if #exclude_end? is +true+.
+ *  Note that with no arguments nor a block +last+ will return the object that
+ *  defines the end of the range even if #exclude_end? is +true+.
  *
- *    (10..20).last      #=> 20
- *    (10...20).last     #=> 20
- *    (10..20).last(3)   #=> [18, 19, 20]
- *    (10...20).last(3)  #=> [17, 18, 19]
+ *    (10..20).last                    #=> 20
+ *    (10...20).last                   #=> 20
+ *    (10...20).last { true }          #=> 19
+ *    (10..20).last(3)                 #=> [18, 19, 20]
+ *    (10...20).last(3)                #=> [17, 18, 19]
+ *    (10...20).last(3) { |i| i.odd? } #=> [15, 17, 19]
  */
 
 static VALUE
 range_last(int argc, VALUE *argv, VALUE range)
 {
-    if (argc == 0) return RANGE_END(range);
-    return rb_ary_last(argc, argv, rb_Array(range));
+    if (argc > 0 || rb_block_given_p()) {
+	return rb_ary_last(argc, argv, rb_Array(range));
+    }
+    else {
+	return RANGE_END(range);
+    }
 }
 
 
