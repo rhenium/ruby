@@ -292,4 +292,11 @@ class TestLogger < Test::Unit::TestCase
     r.close
     assert_equal("msg2\n\n", msg)
   end
+
+  def test_initialize_specify_level
+    logger = Logger.new(STDERR) # default value
+    assert_equal(Logger::DEBUG, logger.level)
+    logger = Logger.new(STDERR, level: :info)
+    assert_equal(Logger::INFO, logger.level)
+  end
 end

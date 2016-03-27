@@ -326,6 +326,7 @@ class Logger
   # :call-seq:
   #   Logger.new(logdev, shift_age = 7, shift_size = 1048576)
   #   Logger.new(logdev, shift_age = 'weekly')
+  #   Logger.new(logdev, level: :info)
   #
   # === Args
   #
@@ -338,21 +339,22 @@ class Logger
   # +shift_size+::
   #   Maximum logfile size (only applies when +shift_age+ is a number). Default
   #   value is 1MiB.
+  # +level+::
+  #   The minimal severity level to log. Defaults to DEBUG.
   #
   # === Description
   #
   # Create an instance.
   #
-  def initialize(logdev, shift_age = 0, shift_size = 1048576)
+  def initialize(logdev, shift_age = 0, shift_size = 1048576, level: DEBUG)
     @progname = nil
-    @level = DEBUG
     @default_formatter = Formatter.new
     @formatter = nil
     @logdev = nil
     if logdev
-      @logdev = LogDevice.new(logdev, :shift_age => shift_age,
-        :shift_size => shift_size)
+      @logdev = LogDevice.new(logdev, shift_age: shift_age, shift_size: shift_size)
     end
+    self.level = level
   end
 
   #
