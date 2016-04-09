@@ -48,65 +48,101 @@ void *X509_STORE_get_ex_data(X509_STORE *str, int idx)
 }
 #endif
 
-#if !defined(HAVE_EVP_MD_CTX_CREATE)
+#if !defined(HAVE_EVP_MD_CTX_NEW)
+/* new in 1.1.0 */
 EVP_MD_CTX *
-EVP_MD_CTX_create(void)
+EVP_MD_CTX_new(void)
 {
+#if defined(HAVE_EVP_MD_CTX_CREATE)
+    return EVP_MD_CTX_create();
+#else /* 0.9.6 */
     EVP_MD_CTX *ctx = OPENSSL_malloc(sizeof(EVP_MD_CTX));
-    if (!ctx) return NULL;
-
+    if (!ctx)
+	return NULL;
     memset(ctx, 0, sizeof(EVP_MD_CTX));
-
     return ctx;
+#endif
 }
 #endif
 
-#if !defined(HAVE_EVP_MD_CTX_CLEANUP)
-int
-EVP_MD_CTX_cleanup(EVP_MD_CTX *ctx)
+#if !defined(HAVE_EVP_MD_CTX_FREE)
+/* new in 1.1.0 */
+void
+EVP_MD_CTX_free(EVP_MD_CTX *ctx)
 {
+#if defined(HAVE_EVP_MD_CTX_DESTROY)
+    EVP_MD_CTX_destroy(ctx);
+#else /* 0.9.6 */
+    /* EVP_MD_CTX_cleanup(ctx); */
     /* FIXME!!! */
     memset(ctx, 0, sizeof(EVP_MD_CTX));
-
-    return 1;
-}
-#endif
-
-#if !defined(HAVE_EVP_MD_CTX_DESTROY)
-void
-EVP_MD_CTX_destroy(EVP_MD_CTX *ctx)
-{
-    EVP_MD_CTX_cleanup(ctx);
     OPENSSL_free(ctx);
+#endif
 }
 #endif
 
+#if !defined(HAVE_HMAC_CTX_NEW)
 #if !defined(HAVE_EVP_MD_CTX_INIT)
-void
+static void
 EVP_MD_CTX_init(EVP_MD_CTX *ctx)
 {
     memset(ctx, 0, sizeof(EVP_MD_CTX));
 }
 #endif
 
-#if !defined(HAVE_HMAC_CTX_INIT)
-void
-HMAC_CTX_init(HMAC_CTX *ctx)
+/* new in 1.1.0 */
+HMAC_CTX *
+HMAC_CTX_new(void)
 {
+    HMAC_CTX *ctx = OPENSSL_malloc(sizeof(HMAC_CTX));
+    if (!ctx)
+	return NULL;
+#if defined(HAVE_HMAC_CTX_INIT)
+    HMAC_CTX_init(ctx);
+#else /* 0.9.6 */
     EVP_MD_CTX_init(&ctx->i_ctx);
     EVP_MD_CTX_init(&ctx->o_ctx);
     EVP_MD_CTX_init(&ctx->md_ctx);
+#endif
+    return ctx;
 }
 #endif
 
-#if !defined(HAVE_HMAC_CTX_CLEANUP)
+#if !defined(HAVE_HMAC_CTX_FREE)
 void
-HMAC_CTX_cleanup(HMAC_CTX *ctx)
+HMAC_CTX_free(HMAC_CTX *ctx)
 {
+#if defined(HAVE_HMAC_CTX_CLEANUP)
+    HMAC_CTX_cleanup(ctx);
+#else /* 0.9.6 */
     EVP_MD_CTX_cleanup(&ctx->i_ctx);
     EVP_MD_CTX_cleanup(&ctx->o_ctx);
     EVP_MD_CTX_cleanup(&ctx->md_ctx);
-    memset(ctx, 0, sizeof(HMAC_CTX));
+#endif
+    OPENSSL_free(ctx);
+}
+#endif
+
+#if !defined(HAVE_EVP_CIPHER_CTX_NEW)
+/* new in 1.1.0 */
+EVP_CIPHER_CTX *
+EVP_CIPHER_CTX_new(void)
+{
+    EVP_CIPHER_CTX *ctx = OPENSSL_malloc(sizeof(EVP_CIPHER_CTX));
+    if (!ctx)
+	return NULL;
+    EVP_CIPHER_CTX_init(ctx);
+    return ctx;
+}
+#endif
+
+#if !defined(HAVE_EVP_MD_CTX_FREE)
+/* new in 1.1.0 */
+void
+EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx)
+{
+    EVP_CIPHER_CTX_cleanup(ctx); /* 0.9.6 also has */
+    OPENSSL_free(ctx);
 }
 #endif
 
@@ -276,6 +312,35 @@ int
 BN_pseudo_rand_range(BIGNUM *r, BIGNUM *range)
 {
     return bn_rand_range(1, r, range);
+}
+#endif
+
+#if !defined(HAVE_BN_IS_PRIME_EX) /* for 0.9.6 */
+int BN_is_prime_ex(const BIGNUM *bn, int checks, BN_CTX *ctx, void *cb)
+{
+    if (cb)
+	rb_bug("not supported");
+    return BN_is_prime(bn, checks, NULL, ctx, NULL);
+}
+#endif
+
+#if !defined(HAVE_BN_IS_PRIME_FASTTEST_EX) /* for 0.9.6 */
+int BN_is_prime_fasttestex(const BIGNUM *bn, int checks, BN_CTX *ctx,
+	int do_trial_division, void *cb)
+{
+    if (cb)
+	rb_bug("not supported");
+    return BN_is_prime_fasttest(bn, checks, NULL, ctx, NULL, do_trial_division);
+}
+#endif
+
+#if !defined(HAVE_BN_GENERATE_PRIME_EX) /* for 0.9.6 */
+int BN_generate_prime_ex(BIGNUM *ret, int bits, int safe,
+                         const BIGNUM *add, const BIGNUM *rem, BN_GENCB *cb)
+{
+    if (cb)
+	rb_bug("not supported");
+    return BN_generate_prime(ret, bits, safe, add, rem, NULL);
 }
 #endif
 

@@ -62,32 +62,32 @@ typedef int i2d_of_void();
 	(d2i_of_void *)d2i_PKCS7_RECIP_INFO, (char *)(ri))
 #endif
 
-#if !defined(HAVE_HMAC_CTX_INIT)
-void HMAC_CTX_init(HMAC_CTX *ctx);
+#if !defined(HAVE_HMAC_CTX_NEW)
+HMAC_CTX *HMAC_CTX_new(void);
+#endif
+
+#if !defined(HAVE_HMAC_CTX_FREE)
+HMAC_CTX *HMAC_CTX_free(void);
 #endif
 
 #if !defined(HAVE_HMAC_CTX_COPY)
 void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #endif
 
-#if !defined(HAVE_HMAC_CTX_CLEANUP)
-void HMAC_CTX_cleanup(HMAC_CTX *ctx);
+#if !defined(HAVE_EVP_MD_CTX_NEW)
+EVP_MD_CTX *EVP_MD_CTX_new(void);
 #endif
 
-#if !defined(HAVE_EVP_MD_CTX_CREATE)
-EVP_MD_CTX *EVP_MD_CTX_create(void);
+#if !defined(HAVE_EVP_MD_CTX_FREE)
+void EVP_MD_CTX_free(EVP_MD_CTX *ctx);
 #endif
 
-#if !defined(HAVE_EVP_MD_CTX_INIT)
-void EVP_MD_CTX_init(EVP_MD_CTX *ctx);
+#if !defined(HAVE_EVP_CIPHER_CTX_NEW)
+EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void);
 #endif
 
-#if !defined(HAVE_EVP_MD_CTX_CLEANUP)
-int EVP_MD_CTX_cleanup(EVP_MD_CTX *ctx);
-#endif
-
-#if !defined(HAVE_EVP_MD_CTX_DESTROY)
-void EVP_MD_CTX_destroy(EVP_MD_CTX *ctx);
+#if !defined(HAVE_EVP_CIPHER_CTX_FREE)
+void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx);
 #endif
 
 #if !defined(HAVE_EVP_CIPHER_CTX_COPY)

@@ -11,8 +11,6 @@
 
 #include "ossl.h"
 
-#define MakeHMAC(obj, klass, ctx) \
-    (obj) = TypedData_Make_Struct((klass), HMAC_CTX, &ossl_hmac_type, (ctx))
 #define GetHMAC(obj, ctx) do { \
     TypedData_Get_Struct((obj), HMAC_CTX, &ossl_hmac_type, (ctx)); \
     if (!(ctx)) { \
@@ -40,8 +38,7 @@ VALUE eHMACError;
 static void
 ossl_hmac_free(void *ctx)
 {
-    HMAC_CTX_cleanup(ctx);
-    ruby_xfree(ctx);
+    HMAC_CTX_free(ctx);
 }
 
 static const rb_data_type_t ossl_hmac_type = {
@@ -55,11 +52,11 @@ static const rb_data_type_t ossl_hmac_type = {
 static VALUE
 ossl_hmac_alloc(VALUE klass)
 {
-    HMAC_CTX *ctx;
-    VALUE obj;
-
-    MakeHMAC(obj, klass, ctx);
-    HMAC_CTX_init(ctx);
+    VALUE obj = TypedData_Wrap_Struct(klass, &ossl_hmac_type, 0);
+    HMAC_CTX *ctx = HMAC_CTX_new();
+    if (!ctx)
+	ossl_raise(rb_eRuntimeError, "HMAC_CTX_new() failed");
+    RTYPEDDATA_DATA(obj) = ctx;
 
     return obj;
 }

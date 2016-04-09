@@ -58,6 +58,11 @@ unless OpenSSL.check_func("SSL_library_init()", "openssl/ssl.h")
   raise "Ignore OpenSSL broken by Apple.\nPlease use another openssl. (e.g. using `configure --with-openssl-dir=/path/to/openssl')"
 end
 
+def have_func_or_macro(name, header)
+  have_func(name) ||
+    have_macro(name, [header]) && $defs.push("-DHAVE_#{name.upcase}")
+end
+
 Logging::message "=== Checking for OpenSSL features... ===\n"
 have_func("ERR_peek_last_error")
 have_func("ASN1_put_eoc")
@@ -66,20 +71,28 @@ have_func("BN_mod_sqr")
 have_func("BN_mod_sub")
 have_func("BN_pseudo_rand_range")
 have_func("BN_rand_range")
+have_func("BN_is_prime_ex") # for 0.9.6
+have_func("BN_is_prime_fasttest_ex") # for 0.9.6
+have_func("BN_generate_prime_ex") # for 0.9.6
 have_func("CONF_get1_default_config_file")
+have_func("EVP_CIPHER_CTX_new")
+have_func("EVP_CIPHER_CTX_free")
 have_func("EVP_CIPHER_CTX_copy")
 have_func("EVP_CIPHER_CTX_set_padding")
 have_func("EVP_CipherFinal_ex")
 have_func("EVP_CipherInit_ex")
 have_func("EVP_DigestFinal_ex")
 have_func("EVP_DigestInit_ex")
-have_func("EVP_MD_CTX_cleanup")
-have_func("EVP_MD_CTX_create")
-have_func("EVP_MD_CTX_destroy")
-have_func("EVP_MD_CTX_init")
-have_func("HMAC_CTX_cleanup")
+have_func("EVP_MD_CTX_new")
+have_func("EVP_MD_CTX_create") # for 0.9.6
+have_func("EVP_MD_CTX_free")
+have_func("EVP_MD_CTX_destroy") # for 0.9.6
+have_func("EVP_MD_CTX_init") # for 0.9.6
+have_func("HMAC_CTX_new")
+have_func("HMAC_CTX_init") # for 0.9.6
+have_func("HMAC_CTX_free")
+have_func("HMAC_CTX_cleanup") # for 0.9.6
 have_func("HMAC_CTX_copy")
-have_func("HMAC_CTX_init")
 have_func("PEM_def_callback")
 have_func("PKCS5_PBKDF2_HMAC")
 have_func("PKCS5_PBKDF2_HMAC_SHA1")
@@ -152,6 +165,7 @@ have_struct_member("EVP_CIPHER_CTX", "engine", "openssl/evp.h")
 have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
 have_macro("OPENSSL_FIPS", ['openssl/opensslconf.h']) && $defs.push("-DHAVE_OPENSSL_FIPS")
 have_macro("EVP_CTRL_GCM_GET_TAG", ['openssl/evp.h']) && $defs.push("-DHAVE_AUTHENTICATED_ENCRYPTION")
+have_func("CRYPTO_lock") # removed in OpenSSL 1.1
 
 Logging::message "=== Checking done. ===\n"
 

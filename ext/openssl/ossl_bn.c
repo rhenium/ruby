@@ -37,17 +37,12 @@ ossl_bn_free(void *ptr)
     BN_clear_free(ptr);
 }
 
-static size_t
-ossl_bn_size(const void *ptr)
-{
-    return sizeof(BIGNUM);
-}
-
 static const rb_data_type_t ossl_bn_type = {
     "OpenSSL/BN",
-    {0, ossl_bn_free, ossl_bn_size,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    {
+	0, ossl_bn_free,
+    },
+    0, 0, RUBY_TYPED_FREE_IMMEDIATELY,
 };
 
 /*
@@ -766,7 +761,7 @@ ossl_bn_s_generate_prime(int argc, VALUE *argv, VALUE klass)
     if (!(result = BN_new())) {
 	ossl_raise(eBNError, NULL);
     }
-    if (!BN_generate_prime(result, num, safe, add, rem, NULL, NULL)) {
+    if (!BN_generate_prime_ex(result, num, safe, add, rem, NULL, NULL)) {
 	BN_free(result);
 	ossl_raise(eBNError, NULL);
     }
@@ -874,7 +869,7 @@ ossl_bn_is_prime(int argc, VALUE *argv, VALUE self)
 	checks = NUM2INT(vchecks);
     }
     GetBN(self, bn);
-    switch (BN_is_prime(bn, checks, NULL, ossl_bn_ctx, NULL)) {
+    switch (BN_is_prime_ex(bn, checks, ossl_bn_ctx, NULL)) {
     case 1:
 	return Qtrue;
     case 0:
@@ -913,7 +908,8 @@ ossl_bn_is_prime_fasttest(int argc, VALUE *argv, VALUE self)
     if (vtrivdiv == Qfalse) {
 	do_trial_division = 0;
     }
-    switch (BN_is_prime_fasttest(bn, checks, NULL, ossl_bn_ctx, NULL, do_trial_division)) {
+    switch (BN_is_prime_fasttest_ex(bn, checks, ossl_bn_ctx, do_trial_division,
+				    NULL)) {
     case 1:
 	return Qtrue;
     case 0:

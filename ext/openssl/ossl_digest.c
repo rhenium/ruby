@@ -31,7 +31,7 @@ static VALUE ossl_digest_alloc(VALUE klass);
 static void
 ossl_digest_free(void *ctx)
 {
-    EVP_MD_CTX_destroy(ctx);
+    EVP_MD_CTX_free(ctx);
 }
 
 static const rb_data_type_t ossl_digest_type = {
@@ -95,9 +95,9 @@ static VALUE
 ossl_digest_alloc(VALUE klass)
 {
     VALUE obj = TypedData_Wrap_Struct(klass, &ossl_digest_type, 0);
-    EVP_MD_CTX *ctx = EVP_MD_CTX_create();
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     if (ctx == NULL)
-	ossl_raise(rb_eRuntimeError, "EVP_MD_CTX_create() failed");
+	ossl_raise(rb_eRuntimeError, "EVP_MD_CTX_new() failed");
     RTYPEDDATA_DATA(obj) = ctx;
 
     return obj;

@@ -7,9 +7,9 @@
  * This program is licensed under the same licence as Ruby.
  * (See the file 'LICENCE'.)
  */
+#define OPENSSL_MIN_API 0x20000000L
 #include "ossl.h"
 #include <stdarg.h> /* for ossl_raise */
-
 /*
  * String to HEXString conversion
  */
@@ -463,6 +463,7 @@ ossl_fips_mode_set(VALUE self, VALUE enabled)
 #endif
 }
 
+#ifdef HAVE_CRYPTO_LOCK /* OpenSSL 1.0.2 or older */
 /**
  * Stores locks needed for OpenSSL thread safety
  */
@@ -550,6 +551,7 @@ static void Init_ossl_locks(void)
     CRYPTO_set_dynlock_lock_callback(ossl_dyn_lock_callback);
     CRYPTO_set_dynlock_destroy_callback(ossl_dyn_destroy_callback);
 }
+#endif
 
 /*
  * OpenSSL provides SSL, TLS and general purpose cryptography.  It wraps the
@@ -1148,7 +1150,9 @@ Init_openssl(void)
      */
     ossl_s_to_der = rb_intern("to_der");
 
+#ifdef HAVE_CRYPTO_LOCK
     Init_ossl_locks();
+#endif
 
     /*
      * Init components
