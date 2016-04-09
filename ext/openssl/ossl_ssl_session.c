@@ -73,20 +73,6 @@ static VALUE ossl_ssl_session_initialize(VALUE self, VALUE arg1)
 	return self;
 }
 
-#if HAVE_SSL_SESSION_CMP == 0
-int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b)
-{
-    if (a->ssl_version != b->ssl_version ||
-	a->session_id_length != b->session_id_length)
-	return 1;
-#if defined(_WIN32)
-    return memcmp(a->session_id, b->session_id, a->session_id_length);
-#else
-    return CRYPTO_memcmp(a->session_id, b->session_id, a->session_id_length);
-#endif
-}
-#endif
-
 /*
  * call-seq:
  *    session1 == session2 -> boolean
@@ -186,7 +172,6 @@ static VALUE ossl_ssl_session_set_timeout(VALUE self, VALUE time_v)
 	return ossl_ssl_session_get_timeout(self);
 }
 
-#ifdef HAVE_SSL_SESSION_GET_ID
 /*
  * call-seq:
  *    session.id -> aString
@@ -205,7 +190,6 @@ static VALUE ossl_ssl_session_get_id(VALUE self)
 
 	return rb_str_new((const char *) p, i);
 }
-#endif
 
 /*
  * call-seq:
@@ -316,12 +300,7 @@ void Init_ossl_ssl_session(void)
 	rb_define_method(cSSLSession, "time=", ossl_ssl_session_set_time, 1);
 	rb_define_method(cSSLSession, "timeout", ossl_ssl_session_get_timeout, 0);
 	rb_define_method(cSSLSession, "timeout=", ossl_ssl_session_set_timeout, 1);
-
-#ifdef HAVE_SSL_SESSION_GET_ID
 	rb_define_method(cSSLSession, "id", ossl_ssl_session_get_id, 0);
-#else
-	rb_undef_method(cSSLSession, "id");
-#endif
 	rb_define_method(cSSLSession, "to_der", ossl_ssl_session_to_der, 0);
 	rb_define_method(cSSLSession, "to_pem", ossl_ssl_session_to_pem, 0);
 	rb_define_method(cSSLSession, "to_text", ossl_ssl_session_to_text, 0);

@@ -204,6 +204,14 @@ int OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
 int EVP_PKEY_id(const EVP_PKEY *pkey);
 #endif
 
+#if !defined(HAVE_SSL_SESSION_GET_ID)
+int SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
+#endif
+
+#if !defined(HAVE_SSL_SESSION_CMP)
+int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

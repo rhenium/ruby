@@ -460,3 +460,32 @@ EVP_PKEY_id(const EVP_PKEY *pkey)
     return pkey->type;
 }
 #endif
+
+#if !defined(HAVE_SSL_SESSION_GET_ID)
+const unsigned char *
+SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len)
+{
+    if (len)
+	*len = s->session_id_length;
+    return s->session_id;
+}
+#endif
+
+#if !defined(HAVE_SSL_SESSION_CMP) /* removed in 1.0.0 */
+int
+SSL_SESSION_cmp(const SSL_SESSION *a, const SSL_SESSION *b)
+{
+    unsigned int a_len;
+    unsigned char *a_sid = SSL_SESSION_get_id(a, &a_len);
+    unsigned int b_len;
+    unsigned char *b_sid = SSL_SESSION_get_id(b, &b_len);
+
+    if (a->ssl_version != b->ssl_version || a_len != b_len)
+	return 1;
+#if defined(_WIN32)
+    return memcmp(a_sid, b_sid, a_len);
+#else
+    return CRYPTO_memcmp(a_sid, b_sid, a_len);
+#endif
+}
+#endif
