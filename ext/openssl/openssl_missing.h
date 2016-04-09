@@ -212,6 +212,15 @@ int SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
 int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b);
 #endif
 
+#if !defined(HAVE_X509_UP_REF)
+void X509_up_ref(X509 *x509);
+void X509_CRL_up_ref(X509_CRL *crl);
+#endif
+
+#if !defined(X509_CRL_GET0_SIGNATURE)
+void X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_CRL *crl);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

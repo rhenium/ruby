@@ -67,7 +67,7 @@ DupX509CRLPtr(VALUE obj)
     X509_CRL *crl;
 
     SafeGetX509CRL(obj, crl);
-    CRYPTO_add(&crl->references, 1, CRYPTO_LOCK_X509_CRL);
+    X509_CRL_up_ref(crl);
 
     return crl;
 }
@@ -180,6 +180,7 @@ static VALUE
 ossl_x509crl_get_signature_algorithm(VALUE self)
 {
     X509_CRL *crl;
+    X509_ALGOR *alg;
     BIO *out;
     BUF_MEM *buf;
     VALUE str;
@@ -188,7 +189,8 @@ ossl_x509crl_get_signature_algorithm(VALUE self)
     if (!(out = BIO_new(BIO_s_mem()))) {
 	ossl_raise(eX509CRLError, NULL);
     }
-    if (!i2a_ASN1_OBJECT(out, crl->sig_alg->algorithm)) {
+    X509_CRL_get0_signature(NULL, &alg, crl);
+    if (!i2a_ASN1_OBJECT(out, alg->algorithm)) {
 	BIO_free(out);
 	ossl_raise(eX509CRLError, NULL);
     }
