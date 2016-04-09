@@ -344,6 +344,27 @@ int BN_generate_prime_ex(BIGNUM *ret, int bits, int safe,
 }
 #endif
 
+#if !defined(HAVE_BN_GENCB_NEW)
+/* BN_GENCB_{new,free,get_arg} are new in 1.1.0 */
+BN_GENCB *
+BN_GENCB_new(void)
+{
+    return (BN_GENCB *)OPENSSL_malloc(sizeof(BN_GENCB));
+}
+
+void
+BN_GENCB_free(BN_GENCB *cb)
+{
+    OPENSSL_free(cb);
+}
+
+void *
+BN_GENCB_get_arg(BN_GENCB *cb)
+{
+    return cb->arg;
+}
+#endif
+
 #if !defined(HAVE_CONF_GET1_DEFAULT_CONFIG_FILE)
 #define OPENSSL_CONF "openssl.cnf"
 char *
@@ -419,14 +440,23 @@ ASN1_put_eoc(unsigned char **pp)
 #endif
 
 #if !defined(HAVE_OCSP_ID_GET0_INFO)
-int OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
-		      ASN1_OCTET_STRING **pikeyHash,
-		      ASN1_INTEGER **pserial, OCSP_CERTID *cid)
+int
+OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
+		  ASN1_OCTET_STRING **pikeyHash,
+		  ASN1_INTEGER **pserial, OCSP_CERTID *cid)
 {
     if (piNameHash || pmd || pikeyHash)
 	rb_bug("not supported");
     if (pserial)
 	*pserial = cid->serialNumber;
     return 1;
+}
+#endif
+
+#if !defined(HAVE_EVP_PKEY_id)
+int
+EVP_PKEY_id(const EVP_PKEY *pkey)
+{
+    return pkey->type;
 }
 #endif

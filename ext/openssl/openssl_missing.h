@@ -176,6 +176,12 @@ int BN_rand_range(BIGNUM *r, BIGNUM *range);
 int BN_pseudo_rand_range(BIGNUM *r, BIGNUM *range);
 #endif
 
+#if !defined(HAVE_BN_GENCB_NEW)
+BN_GENCB *BN_GENCB_new(void);
+void BN_GENCB_free(BN_GENCB *cb);
+void *BN_GENCB_get_arg(BN_GENCB *cb);
+#endif
+
 #if !defined(HAVE_CONF_GET1_DEFAULT_CONFIG_FILE)
 char *CONF_get1_default_config_file(void);
 #endif
@@ -192,6 +198,10 @@ int ASN1_put_eoc(unsigned char **pp);
 int OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
 		      ASN1_OCTET_STRING **pikeyHash,
 		      ASN1_INTEGER **pserial, OCSP_CERTID *cid);
+#endif
+
+#if !defined(HAVE_EVP_PKEY_id)
+int EVP_PKEY_id(const EVP_PKEY *pkey);
 #endif
 
 #if defined(__cplusplus)

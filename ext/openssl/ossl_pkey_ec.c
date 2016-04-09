@@ -137,7 +137,7 @@ VALUE ossl_ec_new(EVP_PKEY *pkey)
 	obj = ec_instance(cEC, EC_KEY_new());
     } else {
 	obj = NewPKey(cEC);
-	if (EVP_PKEY_type(pkey->type) != EVP_PKEY_EC) {
+	if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_EC) {
 	    ossl_raise(rb_eTypeError, "Not a EC key!");
 	}
 	SetPKey(obj, pkey);

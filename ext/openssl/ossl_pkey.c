@@ -41,7 +41,7 @@ ossl_generate_cb_2(int p, int n, BN_GENCB *cb)
     struct ossl_generate_cb_arg *arg;
     int state;
 
-    arg = (struct ossl_generate_cb_arg *)cb->arg;
+    arg = (struct ossl_generate_cb_arg *)BN_GENCB_get_arg(cb);
     if (arg->yield) {
 	ary = rb_ary_new2(2);
 	rb_ary_store(ary, 0, INT2NUM(p));
@@ -91,7 +91,7 @@ ossl_pkey_new(EVP_PKEY *pkey)
     if (!pkey) {
 	ossl_raise(ePKeyError, "Cannot make new key from NULL.");
     }
-    switch (EVP_PKEY_type(pkey->type)) {
+    switch (EVP_PKEY_type(EVP_PKEY_id(pkey))) {
 #if !defined(OPENSSL_NO_RSA)
     case EVP_PKEY_RSA:
 	return ossl_rsa_new(pkey);
@@ -286,7 +286,7 @@ static VALUE
 ossl_pkey_sign(VALUE self, VALUE digest, VALUE data)
 {
     EVP_PKEY *pkey;
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx;
     unsigned int buf_len;
     VALUE str;
     int result;
@@ -295,12 +295,15 @@ ossl_pkey_sign(VALUE self, VALUE digest, VALUE data)
 	ossl_raise(rb_eArgError, "Private key is needed.");
     }
     GetPKey(self, pkey);
-    EVP_SignInit(&ctx, GetDigestPtr(digest));
+    ctx = EVP_MD_CTX_new();
+    if (!ctx)
+	ossl_raise(rb_eRuntimeError, "EVP_MD_CTX_new() failed");
+    EVP_SignInit(ctx, GetDigestPtr(digest));
     StringValue(data);
-    EVP_SignUpdate(&ctx, RSTRING_PTR(data), RSTRING_LEN(data));
+    EVP_SignUpdate(ctx, RSTRING_PTR(data), RSTRING_LEN(data));
     str = rb_str_new(0, EVP_PKEY_size(pkey)+16);
-    result = EVP_SignFinal(&ctx, (unsigned char *)RSTRING_PTR(str), &buf_len, pkey);
-    EVP_MD_CTX_cleanup(&ctx);
+    result = EVP_SignFinal(ctx, (unsigned char *)RSTRING_PTR(str), &buf_len, pkey);
+    EVP_MD_CTX_free(ctx);
     if (!result)
 	ossl_raise(ePKeyError, NULL);
     assert((long)buf_len <= RSTRING_LEN(str));
@@ -334,16 +337,19 @@ static VALUE
 ossl_pkey_verify(VALUE self, VALUE digest, VALUE sig, VALUE data)
 {
     EVP_PKEY *pkey;
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx;
     int result;
 
     GetPKey(self, pkey);
     StringValue(sig);
     StringValue(data);
-    EVP_VerifyInit(&ctx, GetDigestPtr(digest));
-    EVP_VerifyUpdate(&ctx, RSTRING_PTR(data), RSTRING_LEN(data));
-    result = EVP_VerifyFinal(&ctx, (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), pkey);
-    EVP_MD_CTX_cleanup(&ctx);
+    ctx = EVP_MD_CTX_new();
+    if (!ctx)
+	ossl_raise(rb_eRuntimeError, "EVP_MD_CTX_new() failed");
+    EVP_VerifyInit(ctx, GetDigestPtr(digest));
+    EVP_VerifyUpdate(ctx, RSTRING_PTR(data), RSTRING_LEN(data));
+    result = EVP_VerifyFinal(ctx, (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), pkey);
+    EVP_MD_CTX_free(ctx);
     switch (result) {
     case 0:
 	return Qfalse;

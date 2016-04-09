@@ -75,6 +75,7 @@ have_func("BN_rand_range")
 have_func("BN_is_prime_ex") # for 0.9.6
 have_func("BN_is_prime_fasttest_ex") # for 0.9.6
 have_func("BN_generate_prime_ex") # for 0.9.6
+have_func("BN_GENCB_new")
 have_func("CONF_get1_default_config_file")
 have_func("EVP_CIPHER_CTX_new")
 have_func("EVP_CIPHER_CTX_free")
@@ -89,6 +90,7 @@ have_func("EVP_MD_CTX_create") # for 0.9.6
 have_func("EVP_MD_CTX_free")
 have_func("EVP_MD_CTX_destroy") # for 0.9.6
 have_func("EVP_MD_CTX_init") # for 0.9.6
+have_func("EVP_PKEY_id")
 have_func("HMAC_CTX_new")
 have_func("HMAC_CTX_init") # for 0.9.6
 have_func("HMAC_CTX_free")
