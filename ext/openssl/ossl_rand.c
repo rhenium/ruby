@@ -146,7 +146,10 @@ ossl_rand_pseudo_bytes(VALUE self, VALUE len)
     int n = NUM2INT(len);
 
     str = rb_str_new(0, n);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     if (!RAND_pseudo_bytes((unsigned char *)RSTRING_PTR(str), n)) {
+#pragma GCC diagnostic pop
 	ossl_raise(eRandomError, NULL);
     }
 
