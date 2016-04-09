@@ -963,10 +963,12 @@ static VALUE
 ossl_ocspcid_get_serial(VALUE self)
 {
     OCSP_CERTID *id;
+    ASN1_INTEGER *serial;
 
     GetOCSPCertId(self, id);
+    OCSP_id_get0_info(NULL, NULL, NULL, &serial, id);
 
-    return asn1integer_to_num(id->serialNumber);
+    return asn1integer_to_num(serial);
 }
 
 void

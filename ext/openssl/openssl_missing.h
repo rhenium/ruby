@@ -188,6 +188,12 @@ int PEM_def_callback(char *buf, int num, int w, void *key);
 int ASN1_put_eoc(unsigned char **pp);
 #endif
 
+#if !defined(HAVE_OCSP_ID_GET0_INFO)
+int OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
+		      ASN1_OCTET_STRING **pikeyHash,
+		      ASN1_INTEGER **pserial, OCSP_CERTID *cid);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

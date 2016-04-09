@@ -66,6 +66,7 @@ end
 Logging::message "=== Checking for OpenSSL features... ===\n"
 have_func("ERR_peek_last_error")
 have_func("ASN1_put_eoc")
+have_func("OCSP_id_get0_info")
 have_func("BN_mod_add")
 have_func("BN_mod_sqr")
 have_func("BN_mod_sub")

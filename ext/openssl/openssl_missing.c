@@ -417,3 +417,16 @@ ASN1_put_eoc(unsigned char **pp)
     return 2;
 }
 #endif
+
+#if !defined(HAVE_OCSP_ID_GET0_INFO)
+int OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
+		      ASN1_OCTET_STRING **pikeyHash,
+		      ASN1_INTEGER **pserial, OCSP_CERTID *cid)
+{
+    if (piNameHash || pmd || pikeyHash)
+	rb_bug("not supported");
+    if (pserial)
+	*pserial = cid->serialNumber;
+    return 1;
+}
+#endif
