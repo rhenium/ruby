@@ -13,6 +13,7 @@ class OpenSSL::TestEC < Test::Unit::TestCase
 
     OpenSSL::PKey::EC.builtin_curves.each do |curve, comment|
       next if curve.start_with?("Oakley") # Oakley curves are not suitable for ECDSA
+      next if /x25519/i =~ curve # ignore X25519
       group = OpenSSL::PKey::EC::Group.new(curve)
 
       key = OpenSSL::PKey::EC.new(group)

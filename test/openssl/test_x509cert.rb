@@ -171,7 +171,7 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     cert.subject = @ee1
     assert_equal(false, cert.verify(@rsa2048))
   rescue OpenSSL::X509::CertificateError
-  end
+  end if OpenSSL::OPENSSL_VERSION_NUMBER < 0x10100000 # OpenSSL 1.1.0 removed DSS1
 
   def test_sign_and_verify_dsa_md5
     assert_raise(OpenSSL::X509::CertificateError){

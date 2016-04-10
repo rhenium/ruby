@@ -140,7 +140,7 @@ class OpenSSL::TestX509Request < Test::Unit::TestCase
     assert_equal(false, req.verify(@rsa1024))
   rescue OpenSSL::X509::RequestError
     skip
-  end
+  end if OpenSSL::OPENSSL_VERSION_NUMBER < 0x10100000 # OpenSSL 1.1.0 removed DSS1
 
   def test_sign_and_verify_dsa_md5
     assert_raise(OpenSSL::X509::RequestError){

@@ -166,7 +166,7 @@ hmac_final(HMAC_CTX *ctx, unsigned char **buf, unsigned int *buf_len)
     HMAC_CTX_copy(final, ctx);
     if (!(*buf = OPENSSL_malloc(HMAC_size(final)))) {
 	HMAC_CTX_free(final);
-	OSSL_Debug("Allocating %"PRIuSIZE" mem", HMAC_size(final));
+	OSSL_Debug("Allocating %"PRIuSIZE" mem", (size_t)HMAC_size(final));
 	ossl_raise(eHMACError, "Cannot allocate memory for hmac");
     }
     HMAC_Final(final, *buf, buf_len);

@@ -113,9 +113,8 @@ ossl_cipher_initialize(VALUE self, VALUE str)
     }
 
     ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) {
+    if (!ctx)
 	ossl_raise(rb_eRuntimeError, "EVP_CIPHER_CTX_new() failed");
-    }
     RTYPEDDATA_DATA(self) = ctx;
     if (!(cipher = EVP_get_cipherbyname(name))) {
 	ossl_raise(rb_eRuntimeError, "unsupported cipher algorithm (%s)", name);

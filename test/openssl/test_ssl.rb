@@ -814,7 +814,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     hostname = 'example.org'
 
     ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "DH"
+    #ctx2.ciphers = "DH"
     ctx2.servername_cb = lambda do |args|
       cb_socket     = args[0]
       lambda_called = args[1]

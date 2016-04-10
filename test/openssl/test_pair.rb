@@ -11,7 +11,7 @@ module OpenSSL::SSLPairM
     host = "127.0.0.1"
     port = 0
     ctx = OpenSSL::SSL::SSLContext.new()
-    ctx.ciphers = "ADH"
+    ctx.ciphers = "DH"
     ctx.tmp_dh_callback = proc { OpenSSL::TestUtils::TEST_KEY_DH1024 }
     tcps = create_tcp_server(host, port)
     ssls = OpenSSL::SSL::SSLServer.new(tcps, ctx)
@@ -21,7 +21,7 @@ module OpenSSL::SSLPairM
   def client(port)
     host = "127.0.0.1"
     ctx = OpenSSL::SSL::SSLContext.new()
-    ctx.ciphers = "ADH"
+    ctx.ciphers = "DH"
     s = create_tcp_client(host, port)
     ssl = OpenSSL::SSL::SSLSocket.new(s, ctx)
     ssl.connect
@@ -49,6 +49,9 @@ module OpenSSL::SSLPairM
     else
       return c, s
     end
+  rescue =>x
+    STDERR.puts x.inspect
+    STDERR.puts x.backtrace
   ensure
     if th&.alive?
       th.kill

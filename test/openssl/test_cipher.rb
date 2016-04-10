@@ -105,6 +105,7 @@ class OpenSSL::TestCipher < Test::Unit::TestCase
     def test_ciphers
       OpenSSL::Cipher.ciphers.each{|name|
         next if /netbsd/ =~ RUBY_PLATFORM && /idea|rc5/i =~ name
+        next if /ChaCha/i =~ name
         begin
           assert_kind_of(OpenSSL::Cipher::Cipher, OpenSSL::Cipher::Cipher.new(name))
         rescue OpenSSL::Cipher::CipherError => e

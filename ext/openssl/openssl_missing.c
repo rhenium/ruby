@@ -81,6 +81,7 @@ HMAC_CTX_reset(HMAC_CTX *ctx)
     EVP_MD_CTX_init(&ctx->o_ctx);
     EVP_MD_CTX_init(&ctx->md_ctx);
 #endif
+    return 0;
 }
 #endif
 
@@ -196,9 +197,9 @@ void
 X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_CRL *crl)
 {
     if (psig != NULL)
-	*psig = &crl->signature;
+	*psig = crl->signature;
     if (palg != NULL)
-	*palg = &crl->sig_alg;
+	*palg = crl->sig_alg;
 }
 #endif
 
@@ -207,25 +208,9 @@ void
 X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ *req)
 {
     if (psig != NULL)
-	*psig = &req->signature;
+	*psig = req->signature;
     if (palg != NULL)
-	*palg = &req->sig_alg;
-}
-#endif
-
-#if !defined(HAVE_X509_GET0_TBS_SIGALG)
-X509_ALGOR *
-X509_get0_tbs_sigalg(X509 *x)
-{
-    return x->cert_info->signature;
-}
-#endif
-
-#if !defined(HAVE_X509_REVOKED_GET0_SERIALNUMBER)
-ASN1_INTEGER *
-X509_REVOKED_get0_serialNumber(X509_REVOKED *x)
-{
-    return &x->serialNumber;
+	*palg = req->sig_alg;
 }
 #endif
 
@@ -237,14 +222,6 @@ X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial)
     if (in != serial)
         return ASN1_STRING_copy(in, serial);
     return 1;
-}
-#endif
-
-#if !defined(HAVE_X509_REVOKED_GET0_REVOCATIONDATE)
-ASN1_TIME *
-X509_REVOKED_get0_revocationDate(X509_REVOKED *x)
-{
-    return x->revocationDate;
 }
 #endif
 
@@ -328,50 +305,6 @@ EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, EVP_CIPHER_CTX *in)
 
     return 1;
 }
-#endif
-
-#if !defined(HAVE_EVP_PKEY_ID) /* 1.1.0 */
-int
-EVP_PKEY_id(const EVP_PKEY *pkey)
-{
-    return pkey->type;
-}
-
-RSA *
-EVP_PKEY_get0_RSA(EVP_PKEY *pkey)
-{
-    if (pkey->type != EVP_PKEY_RSA)
-        return NULL;
-    return pkey->pkey.rsa;
-}
-
-DSA *
-EVP_PKEY_get0_DSA(EVP_PKEY *pkey)
-{
-    if (pkey->type != EVP_PKEY_DSA)
-        return NULL;
-    return pkey->pkey.dsa;
-}
-
-#if !defined(OPENSSL_NO_EC)
-EC_KEY *
-EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey)
-{
-    if (pkey->type != EVP_PKEY_EC)
-        return NULL;
-    return pkey->pkey.ec;
-}
-#endif
-
-#if !defined(OPENSSL_NO_DH)
-DH *
-EVP_PKEY_get0_DH(EVP_PKEY *pkey)
-{
-    if (pkey->type != EVP_PKEY_DH)
-        return NULL;
-    return pkey->pkey.dh;
-}
-#endif
 #endif
 
 /* BIGNUM */
@@ -485,27 +418,6 @@ int BN_generate_prime_ex(BIGNUM *ret, int bits, int safe,
     if (cb)
 	rb_bug("not supported");
     return BN_generate_prime(ret, bits, safe, add, rem, NULL);
-}
-#endif
-
-#if !defined(HAVE_BN_GENCB_NEW)
-/* BN_GENCB_{new,free,get_arg} are new in 1.1.0 */
-BN_GENCB *
-BN_GENCB_new(void)
-{
-    return (BN_GENCB *)OPENSSL_malloc(sizeof(BN_GENCB));
-}
-
-void
-BN_GENCB_free(BN_GENCB *cb)
-{
-    OPENSSL_free(cb);
-}
-
-void *
-BN_GENCB_get_arg(BN_GENCB *cb)
-{
-    return cb->arg;
 }
 #endif
 

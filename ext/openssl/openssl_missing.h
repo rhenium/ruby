@@ -73,7 +73,7 @@ HMAC_CTX *HMAC_CTX_new(void);
 #endif
 
 #if !defined(HAVE_HMAC_CTX_FREE)
-HMAC_CTX *HMAC_CTX_free(void);
+void HMAC_CTX_free(HMAC_CTX *ctx);
 #endif
 
 #if !defined(HAVE_HMAC_CTX_COPY)
@@ -178,12 +178,6 @@ int BN_rand_range(BIGNUM *r, BIGNUM *range);
 int BN_pseudo_rand_range(BIGNUM *r, BIGNUM *range);
 #endif
 
-#if !defined(HAVE_BN_GENCB_NEW)
-BN_GENCB *BN_GENCB_new(void);
-void BN_GENCB_free(BN_GENCB *cb);
-void *BN_GENCB_get_arg(BN_GENCB *cb);
-#endif
-
 #if !defined(HAVE_CONF_GET1_DEFAULT_CONFIG_FILE)
 char *CONF_get1_default_config_file(void);
 #endif
@@ -251,15 +245,63 @@ int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b);
 	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_X509)
 #  define X509_CRL_up_ref(x) \
 	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_X509_CRL);
+#  define X509_STORE_up_ref(x) \
+	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_X509_STORE);
 #  define SSL_SESSION_up_ref(x) \
 	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_SSL_SESSION);
 #  define EVP_PKEY_up_ref(x) \
 	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_EVP_PKEY);
 #endif
 
-#if defined(__cplusplus)
-}
+/* EVP_PKEY */
+#if !defined(HAVE_EVP_PKEY_ID)
+#  define EVP_PKEY_id(pkey) (pkey->type)
+#endif
+
+#if defined(HAVE_EVP_PKEY_TYPE) /* is not opaque */
+#  define EVP_PKEY_get0_RSA(p) (p->pkey.rsa)
+#  define EVP_PKEY_get0_DSA(p) (p->pkey.dsa)
+#  define EVP_PKEY_get0_EC_KEY(p) (p->pkey.ec)
+#  define EVP_PKEY_get0_DH(p) (p->pkey.dh)
+#endif
+
+/* HMAC */
+#if !defined(HAVE_HMAC_CTX_RESET)
+int HMAC_CTX_reset(HMAC_CTX *ctx);
+#endif
+
+#if !defined(HAVE_HMAC_INIT_EX)
+int HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len, const EVP_MD *md, void *impl);
+#endif
+
+#if !defined(HAVE_HMAC_CTX_NEW)
+HMAC_CTX *HMAC_CTX_new(void);
+#endif
+
+/* BN_GENCB */
+#if !defined(HAVE_BN_GENCB_NEW)
+#  define BN_GENCB_new() ((BN_GENCB *)OPENSSL_malloc(sizeof(BN_GENCB)))
+#  define BN_GENCB_free(cb) OPENSSL_free(cb)
+#  define BN_GENCB_get_arg(cb) cb->arg
+#endif
+
+/* X509 */
+#if !defined(HAVE_X509_GET0_TBS_SIGALG)
+#  define X509_get0_tbs_sigalg(x) (x->cert_info->signature)
+#endif
+
+#if !defined(HAVE_X509_REVOKED_GET0_SERIALNUMBER)
+#  define X509_REVOKED_get0_serialNumber(x) (x->serialNumber)
+#endif
+
+#if !defined(HAVE_X509_REVOKED_GET0_REVOCATIONDATE)
+#  define X509_REVOKED_get0_revocationDate(x) (x->revocationDate)
 #endif
 
 
+
+
+#if defined(__cplusplus)
+}
+#endif
 #endif /* _OSSL_OPENSSL_MISSING_H_ */
