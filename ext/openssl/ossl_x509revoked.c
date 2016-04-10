@@ -139,7 +139,7 @@ ossl_x509revoked_get_time(VALUE self)
 
     GetX509Rev(self, rev);
 
-    return asn1time_to_time(rev->revocationDate);
+    return asn1time_to_time(X509_REVOKED_get0_revocationDate(rev));
 }
 
 static VALUE
@@ -150,7 +150,7 @@ ossl_x509revoked_set_time(VALUE self, VALUE time)
 
     sec = time_to_time_t(time);
     GetX509Rev(self, rev);
-    if (!X509_time_adj(rev->revocationDate, 0, &sec)) {
+    if (!X509_time_adj(X509_REVOKED_get0_revocationDate(rev), 0, &sec)) {
 	ossl_raise(eX509RevError, NULL);
     }
 
@@ -198,8 +198,8 @@ ossl_x509revoked_set_extensions(VALUE self, VALUE ary)
 	OSSL_Check_Kind(RARRAY_AREF(ary, i), cX509Ext);
     }
     GetX509Rev(self, rev);
-    sk_X509_EXTENSION_pop_free(rev->extensions, X509_EXTENSION_free);
-    rev->extensions = NULL;
+    while ((ext = X509_REVOKED_delete_ext(rev, 0)))
+	X509_EXTENSION_free(ext);
     for (i=0; i<RARRAY_LEN(ary); i++) {
 	item = RARRAY_AREF(ary, i);
 	ext = DupX509ExtPtr(item);

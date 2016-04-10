@@ -9,11 +9,29 @@
  */
 #include RUBY_EXTCONF_H
 
+#include <ruby.h>
+
 #if defined(HAVE_OPENSSL_ENGINE_H) && defined(HAVE_EVP_CIPHER_CTX_ENGINE)
 # include <openssl/engine.h>
 #endif
 #include <openssl/x509_vfy.h>
 
+/*** 0.9.6 compatibility ***/
+#if !defined(HAVE_X509_CRL_SET_NEXTUPDATE)
+int
+X509_CRL_set_nextUpdate(X509_CRL *x, const ASN1_TIME *tm)
+{
+    ASN1_TIME *in = M_ASN1_TIME_dup(tm);
+    if (!in)
+	return 0;
+    x->crl->nextUpdate = in;
+    return 1;
+}
+#endif
+
+/*** 0.9.6 compatibility end ***/
+
+/* HMAC */
 #if !defined(OPENSSL_NO_HMAC)
 #include <string.h> /* memcpy() */
 #include <openssl/hmac.h>
@@ -32,56 +50,8 @@ HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
     EVP_MD_CTX_copy(&out->o_ctx, &in->o_ctx);
 }
 #endif /* HAVE_HMAC_CTX_COPY */
-#endif /* NO_HMAC */
 
-#if !defined(HAVE_X509_STORE_SET_EX_DATA)
-int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data)
-{
-    return CRYPTO_set_ex_data(&str->ex_data, idx, data);
-}
-#endif
-
-#if !defined(HAVE_X509_STORE_GET_EX_DATA)
-void *X509_STORE_get_ex_data(X509_STORE *str, int idx)
-{
-    return CRYPTO_get_ex_data(&str->ex_data, idx);
-}
-#endif
-
-#if !defined(HAVE_EVP_MD_CTX_NEW)
-/* new in 1.1.0 */
-EVP_MD_CTX *
-EVP_MD_CTX_new(void)
-{
-#if defined(HAVE_EVP_MD_CTX_CREATE)
-    return EVP_MD_CTX_create();
-#else /* 0.9.6 */
-    EVP_MD_CTX *ctx = OPENSSL_malloc(sizeof(EVP_MD_CTX));
-    if (!ctx)
-	return NULL;
-    memset(ctx, 0, sizeof(EVP_MD_CTX));
-    return ctx;
-#endif
-}
-#endif
-
-#if !defined(HAVE_EVP_MD_CTX_FREE)
-/* new in 1.1.0 */
-void
-EVP_MD_CTX_free(EVP_MD_CTX *ctx)
-{
-#if defined(HAVE_EVP_MD_CTX_DESTROY)
-    EVP_MD_CTX_destroy(ctx);
-#else /* 0.9.6 */
-    /* EVP_MD_CTX_cleanup(ctx); */
-    /* FIXME!!! */
-    memset(ctx, 0, sizeof(EVP_MD_CTX));
-    OPENSSL_free(ctx);
-#endif
-}
-#endif
-
-#if defined(HAVE_HMAC_INIT_EX)
+#if !defined(HAVE_HMAC_INIT_EX)
 int
 HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len,
 	     const EVP_MD *md, void *impl)
@@ -141,50 +111,21 @@ HMAC_CTX_free(HMAC_CTX *ctx)
     OPENSSL_free(ctx);
 }
 #endif
+#endif /* NO_HMAC */
 
-#if !defined(HAVE_EVP_CIPHER_CTX_NEW)
-/* new in 1.1.0 */
-EVP_CIPHER_CTX *
-EVP_CIPHER_CTX_new(void)
+
+/* X509 */
+#if !defined(HAVE_X509_STORE_SET_EX_DATA)
+int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data)
 {
-    EVP_CIPHER_CTX *ctx = OPENSSL_malloc(sizeof(EVP_CIPHER_CTX));
-    if (!ctx)
-	return NULL;
-    EVP_CIPHER_CTX_init(ctx);
-    return ctx;
+    return CRYPTO_set_ex_data(&str->ex_data, idx, data);
 }
 #endif
 
-#if !defined(HAVE_EVP_MD_CTX_FREE)
-/* new in 1.1.0 */
-void
-EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx)
+#if !defined(HAVE_X509_STORE_GET_EX_DATA)
+void *X509_STORE_get_ex_data(X509_STORE *str, int idx)
 {
-    EVP_CIPHER_CTX_cleanup(ctx); /* 0.9.6 also has */
-    OPENSSL_free(ctx);
-}
-#endif
-
-#if !defined(HAVE_EVP_CIPHER_CTX_COPY)
-/*
- * this function does not exist in OpenSSL yet... or ever?.
- * a future version may break this function.
- * tested on 0.9.7d.
- */
-int
-EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, EVP_CIPHER_CTX *in)
-{
-    memcpy(out, in, sizeof(EVP_CIPHER_CTX));
-
-#if defined(HAVE_ENGINE_ADD) && defined(HAVE_EVP_CIPHER_CTX_ENGINE)
-    if (in->engine) ENGINE_add(out->engine);
-    if (in->cipher_data) {
-	out->cipher_data = OPENSSL_malloc(in->cipher->ctx_size);
-	memcpy(out->cipher_data, in->cipher_data, in->cipher->ctx_size);
-    }
-#endif
-
-    return 1;
+    return CRYPTO_get_ex_data(&str->ex_data, idx);
 }
 #endif
 
@@ -250,6 +191,190 @@ X509_CRL_add0_revoked(X509_CRL *crl, X509_REVOKED *rev)
 }
 #endif
 
+#if !defined(HAVE_X509_CRL_GET0_SIGNATURE)
+void
+X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_CRL *crl)
+{
+    if (psig != NULL)
+	*psig = &crl->signature;
+    if (palg != NULL)
+	*palg = &crl->sig_alg;
+}
+#endif
+
+#if !defined(HAVE_X509_REQ_GET0_SIGNATURE)
+void
+X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ *req)
+{
+    if (psig != NULL)
+	*psig = &req->signature;
+    if (palg != NULL)
+	*palg = &req->sig_alg;
+}
+#endif
+
+#if !defined(HAVE_X509_GET0_TBS_SIGALG)
+X509_ALGOR *
+X509_get0_tbs_sigalg(X509 *x)
+{
+    return x->cert_info->signature;
+}
+#endif
+
+#if !defined(HAVE_X509_REVOKED_GET0_SERIALNUMBER)
+ASN1_INTEGER *
+X509_REVOKED_get0_serialNumber(X509_REVOKED *x)
+{
+    return &x->serialNumber;
+}
+#endif
+
+#if !defined(HAVE_X509_REVOKED_SET_SERIALNUMBER)
+int
+X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial)
+{
+    ASN1_INTEGER *in = x->serialNumber;
+    if (in != serial)
+        return ASN1_STRING_copy(in, serial);
+    return 1;
+}
+#endif
+
+#if !defined(HAVE_X509_REVOKED_GET0_REVOCATIONDATE)
+ASN1_TIME *
+X509_REVOKED_get0_revocationDate(X509_REVOKED *x)
+{
+    return x->revocationDate;
+}
+#endif
+
+
+/* EVP_MD */
+#include <openssl/evp.h>
+#if !defined(HAVE_EVP_MD_CTX_NEW)
+/* new in 1.1.0 */
+EVP_MD_CTX *
+EVP_MD_CTX_new(void)
+{
+#if defined(HAVE_EVP_MD_CTX_CREATE)
+    return EVP_MD_CTX_create();
+#else /* 0.9.6 */
+    EVP_MD_CTX *ctx = OPENSSL_malloc(sizeof(EVP_MD_CTX));
+    if (!ctx)
+	return NULL;
+    memset(ctx, 0, sizeof(EVP_MD_CTX));
+    return ctx;
+#endif
+}
+#endif
+
+#if !defined(HAVE_EVP_MD_CTX_FREE)
+/* new in 1.1.0 */
+void
+EVP_MD_CTX_free(EVP_MD_CTX *ctx)
+{
+#if defined(HAVE_EVP_MD_CTX_DESTROY)
+    EVP_MD_CTX_destroy(ctx);
+#else /* 0.9.6 */
+    /* EVP_MD_CTX_cleanup(ctx); */
+    /* FIXME!!! */
+    memset(ctx, 0, sizeof(EVP_MD_CTX));
+    OPENSSL_free(ctx);
+#endif
+}
+#endif
+
+#if !defined(HAVE_EVP_CIPHER_CTX_NEW)
+/* new in 1.1.0 */
+EVP_CIPHER_CTX *
+EVP_CIPHER_CTX_new(void)
+{
+    EVP_CIPHER_CTX *ctx = OPENSSL_malloc(sizeof(EVP_CIPHER_CTX));
+    if (!ctx)
+	return NULL;
+    EVP_CIPHER_CTX_init(ctx);
+    return ctx;
+}
+#endif
+
+#if !defined(HAVE_EVP_MD_CTX_FREE)
+/* new in 1.1.0 */
+void
+EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx)
+{
+    EVP_CIPHER_CTX_cleanup(ctx); /* 0.9.6 also has */
+    OPENSSL_free(ctx);
+}
+#endif
+
+#if !defined(HAVE_EVP_CIPHER_CTX_COPY)
+/*
+ * this function does not exist in OpenSSL yet... or ever?.
+ * a future version may break this function.
+ * tested on 0.9.7d.
+ */
+int
+EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, EVP_CIPHER_CTX *in)
+{
+    memcpy(out, in, sizeof(EVP_CIPHER_CTX));
+
+#if defined(HAVE_ENGINE_ADD) && defined(HAVE_EVP_CIPHER_CTX_ENGINE)
+    if (in->engine) ENGINE_add(out->engine);
+    if (in->cipher_data) {
+	out->cipher_data = OPENSSL_malloc(in->cipher->ctx_size);
+	memcpy(out->cipher_data, in->cipher_data, in->cipher->ctx_size);
+    }
+#endif
+
+    return 1;
+}
+#endif
+
+#if !defined(HAVE_EVP_PKEY_ID) /* 1.1.0 */
+int
+EVP_PKEY_id(const EVP_PKEY *pkey)
+{
+    return pkey->type;
+}
+
+RSA *
+EVP_PKEY_get0_RSA(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_RSA)
+        return NULL;
+    return pkey->pkey.rsa;
+}
+
+DSA *
+EVP_PKEY_get0_DSA(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_DSA)
+        return NULL;
+    return pkey->pkey.dsa;
+}
+
+#if !defined(OPENSSL_NO_EC)
+EC_KEY *
+EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_EC)
+        return NULL;
+    return pkey->pkey.ec;
+}
+#endif
+
+#if !defined(OPENSSL_NO_DH)
+DH *
+EVP_PKEY_get0_DH(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_DH)
+        return NULL;
+    return pkey->pkey.dh;
+}
+#endif
+#endif
+
+/* BIGNUM */
 #if !defined(HAVE_BN_MOD_SQR)
 int
 BN_mod_sqr(BIGNUM *r, const BIGNUM *a, const BIGNUM *m, BN_CTX *ctx)
@@ -446,6 +571,9 @@ PEM_def_callback(char *buf, int num, int w, void *key)
 }
 #endif
 
+
+/* ASN.1 */
+#include <openssl/asn1.h>
 #if !defined(HAVE_ASN1_PUT_EOC)
 int
 ASN1_put_eoc(unsigned char **pp)
@@ -458,6 +586,9 @@ ASN1_put_eoc(unsigned char **pp)
 }
 #endif
 
+/* OCSP */
+#if defined(HAVE_OPENSSL_OCSP_H)
+#include <openssl/ocsp.h>
 #if !defined(HAVE_OCSP_ID_GET0_INFO)
 int
 OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
@@ -471,67 +602,11 @@ OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
     return 1;
 }
 #endif
+#endif /* HAVE_OPENSSL_OCSP_H */
 
-#if !defined(HAVE_OCSP_SINGLERESP_DELETE_EXT)
-X509_EXTENSION *
-OCSP_SINGLERESP_delete_ext(OCSP_SINGLERESP *s, int loc)
-{
-    return sk_X509_EXTENSION_delete(s->singleExtensions, loc);
-}
-#endif
 
-#if !defined(HAVE_OCSP_SINGLEREST_GET0_ID)
-OCSP_CERTID *
-OCSP_SINGLERESP_get0_id(OCSP_SINGLERESP *single)
-{
-    return single->certId;
-}
-#endif
-
-#if !defined(HAVE_EVP_PKEY_id) /* 1.1.0 */
-int
-EVP_PKEY_id(const EVP_PKEY *pkey)
-{
-    return pkey->type;
-}
-
-RSA *
-EVP_PKEY_get0_RSA(EVP_PKEY *pkey)
-{
-    if (pkey->type != EVP_PKEY_RSA)
-        return NULL;
-    return pkey->pkey.rsa;
-}
-
-DSA *
-EVP_PKEY_get0_DSA(EVP_PKEY *pkey)
-{
-    if (pkey->type != EVP_PKEY_DSA)
-        return NULL;
-    return pkey->pkey.dsa;
-}
-
-#if !defined(OPENSSL_NO_EC)
-EC_KEY *
-EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey)
-{
-    if (pkey->type != EVP_PKEY_EC)
-        return NULL;
-    return pkey->pkey.ec;
-}
-#endif
-
-#if !defined(OPENSSL_NO_DH)
-DH *
-EVP_PKEY_get0_DH(EVP_PKEY *pkey)
-{
-    if (pkey->type != EVP_PKEY_DH)
-        return NULL;
-    return pkey->pkey.dh;
-}
-#endif
-#endif
-
+/* SSL */
+#include <openssl/ssl.h>
 #if !defined(HAVE_SSL_SESSION_GET_ID)
 const unsigned char *
 SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len)
@@ -547,84 +622,21 @@ int
 SSL_SESSION_cmp(const SSL_SESSION *a, const SSL_SESSION *b)
 {
     unsigned int a_len;
-    unsigned char *a_sid = SSL_SESSION_get_id(a, &a_len);
+    const unsigned char *a_sid = SSL_SESSION_get_id(a, &a_len);
     unsigned int b_len;
-    unsigned char *b_sid = SSL_SESSION_get_id(b, &b_len);
+    const unsigned char *b_sid = SSL_SESSION_get_id(b, &b_len);
 
-    if (a->ssl_version != b->ssl_version || a_len != b_len)
+#if !defined(HAVE_SSL_SESSION_GET_ID) /* 1.0.2 or older */
+    if (a->ssl_version != b->ssl_version)
 	return 1;
+#endif
+    if (a_len != b_len)
+	return 1;
+
 #if defined(_WIN32)
     return memcmp(a_sid, b_sid, a_len);
 #else
     return CRYPTO_memcmp(a_sid, b_sid, a_len);
 #endif
 }
-#endif
-
-#if !defined(HAVE_X509_UP_REF)
-void
-X509_up_ref(X509 *x509)
-{
-    CRYPTO_add(&x509->references, 1, CRYPTO_LOCK_X509);
-}
-
-void
-X509_CRL_up_ref(X509_CRL *crl)
-{
-    CRYPTO_add(&crl->references, 1, CRYPTO_LOCK_X509_CRL);
-}
-
-void
-SSL_SESSION_up_ref(SSL_SESSION *sess)
-{
-    CRYPTO_add(&sess->references, 1, CRYPTO_LOCK_SSL_SESSION);
-}
-
-void
-EVP_PKEY_up_ref(EVP_PKEY *pkey)
-{
-    CRYPTO_add(&pkey->references, 1, CRYPTO_LOCK_EVP_PKEY);
-}
-#endif
-
-#if !defined(X509_CRL_GET0_SIGNATURE)
-void
-X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_CRL *crl)
-{
-    if (psig != NULL)
-	*psig = &crl->signature;
-    if (palg != NULL)
-	*palg = &crl->sig_alg;
-}
-#endif
-
-#if !defined(X509_REQ_GET0_SIGNATURE)
-void
-X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ req)
-{
-    if (psig != NULL)
-	*psig = &req->signature;
-    if (palg != NULL)
-	*palg = &ret->sig_alg;
-}
-#endif
-
-#if !defined(X509_REVOKED_GET0_SERIALNUMBER)
-ASN1_INTEGER *
-X509_REVOKED_get0_serialNumber(X509_REVOKED *x)
-{
-    return &x->serialNumber;
-}
-#endif
-
-#if !defined(X509_REVOKED_SET_SERIALNUMBER)
-int
-X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial)
-{
-    ASN1_INTEGER *in = x->serialNumber;
-    if (in != serial)
-        return ASN1_STRING_copy(in, serial);
-    return 1;
-}
-#endif
-
+#endif /* SSL */

@@ -62,6 +62,12 @@ typedef int i2d_of_void();
 	(d2i_of_void *)d2i_PKCS7_RECIP_INFO, (char *)(ri))
 #endif
 
+#if !defined(HAVE_X509_CRL_SET_NEXTUPDATE)
+int X509_CRL_set_nextUpdate(X509_CRL *x, const ASN1_TIME *tm);
+#endif
+
+
+
 #if !defined(HAVE_HMAC_CTX_NEW)
 HMAC_CTX *HMAC_CTX_new(void);
 #endif
@@ -114,10 +120,6 @@ int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, EVP_CIPHER_CTX *in);
 
 #if !defined(EVP_MD_name)
 #  define EVP_MD_name(e) OBJ_nid2sn(EVP_MD_type(e))
-#endif
-
-#if !defined(HAVE_EVP_HMAC_INIT_EX)
-#  define HMAC_Init_ex(ctx, key, len, digest, engine) HMAC_Init((ctx), (key), (len), (digest))
 #endif
 
 #if !defined(PKCS7_is_detached)
@@ -194,27 +196,8 @@ int PEM_def_callback(char *buf, int num, int w, void *key);
 int ASN1_put_eoc(unsigned char **pp);
 #endif
 
-#if !defined(HAVE_OCSP_ID_GET0_INFO)
-int OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
-		      ASN1_OCTET_STRING **pikeyHash,
-		      ASN1_INTEGER **pserial, OCSP_CERTID *cid);
-#endif
-
 #if !defined(HAVE_EVP_PKEY_id)
 int EVP_PKEY_id(const EVP_PKEY *pkey);
-#endif
-
-#if !defined(HAVE_SSL_SESSION_GET_ID)
-int SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
-#endif
-
-#if !defined(HAVE_SSL_SESSION_CMP)
-int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b);
-#endif
-
-#if !defined(HAVE_X509_UP_REF)
-void X509_up_ref(X509 *x509);
-void X509_CRL_up_ref(X509_CRL *crl);
 #endif
 
 #if !defined(X509_CRL_GET0_SIGNATURE)
@@ -231,6 +214,47 @@ ASN1_INTEGER *X509_REVOKED_get0_serialNumber(X509_REVOKED *x);
 
 #if !defined(X509_REVOKED_SET_SERIALNUMBER)
 int X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial);
+#endif
+
+/*** new in 1.1.0 ***/
+/* OCSP */
+#if defined(HAVE_OPENSSL_OCSP_H)
+#if !defined(HAVE_OCSP_ID_GET0_INFO)
+int OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
+		      ASN1_OCTET_STRING **pikeyHash,
+		      ASN1_INTEGER **pserial, OCSP_CERTID *cid);
+#endif
+
+#if !defined(HAVE_OCSP_SINGLERESP_DELETE_EXT) /* for 0.9.6 */
+#  define OCSP_SINGLERESP_delete_ext(s, loc) \
+	sk_X509_EXTENSION_delete((s)->singleExtensions, (loc))
+#endif
+
+#if !defined(HAVE_OCSP_SINGLERESP_GET0_ID)
+#  define OCSP_SINGLERESP_get0_id(s) (s)->certId
+#endif
+#endif /* HAVE_OPENSSL_OCSP_H */
+
+/* SSL */
+#include <openssl/ssl.h>
+#if !defined(HAVE_SSL_SESSION_GET_ID)
+int SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
+#endif
+
+#if !defined(HAVE_SSL_SESSION_CMP)
+int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b);
+#endif
+
+/* reference counter */
+#if !defined(HAVE_X509_UP_REF)
+#  define X509_up_ref(x) \
+	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_X509)
+#  define X509_CRL_up_ref(x) \
+	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_X509_CRL);
+#  define SSL_SESSION_up_ref(x) \
+	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_SSL_SESSION);
+#  define EVP_PKEY_up_ref(x) \
+	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_EVP_PKEY);
 #endif
 
 #if defined(__cplusplus)

@@ -333,7 +333,11 @@ ossl_call_session_get_cb(VALUE ary)
 
 /* this method is currently only called for servers (in OpenSSL <= 0.9.8e) */
 static SSL_SESSION *
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 ossl_sslctx_session_get_cb(SSL *ssl, unsigned char *buf, int len, int *copy)
+#else
+ossl_sslctx_session_get_cb(SSL *ssl, const unsigned char *buf, int len, int *copy)
+#endif
 {
     VALUE ary, ssl_obj, ret_obj;
     SSL_SESSION *sess;
@@ -866,7 +870,7 @@ ossl_sslctx_setup(VALUE self)
 }
 
 static VALUE
-ossl_ssl_cipher_to_ary(SSL_CIPHER *cipher)
+ossl_ssl_cipher_to_ary(const SSL_CIPHER *cipher)
 {
     VALUE ary;
     int bits, alg_bits;
@@ -893,7 +897,7 @@ ossl_sslctx_get_ciphers(VALUE self)
     SSL_CTX *ctx;
     SSL *temp_ssl;
     STACK_OF(SSL_CIPHER) *ciphers;
-    SSL_CIPHER *cipher;
+    const SSL_CIPHER *cipher;
     VALUE ary;
     int i, num;
 

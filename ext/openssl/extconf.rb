@@ -66,7 +66,6 @@ end
 Logging::message "=== Checking for OpenSSL features... ===\n"
 have_func("ERR_peek_last_error")
 have_func("ASN1_put_eoc")
-have_func("OCSP_id_get0_info")
 have_func("BN_mod_add")
 have_func("BN_mod_sqr")
 have_func("BN_mod_sub")
@@ -108,10 +107,14 @@ have_func("X509_CRL_add0_revoked")
 have_func("X509_CRL_set_issuer_name")
 have_func("X509_CRL_set_version")
 have_func("X509_CRL_sort")
+have_func("X509_CRL_set_nextUpdate") # for 0.9.6
 have_func("X509_CRL_get0_signature")
 have_func("X509_REQ_get0_signature")
+have_func("X509_get0_tbs_sigalg")
 have_func("X509_REVOKED_get0_serialNumber")
 have_func("X509_REVOKED_set_serialNumber")
+have_func("X509_REVOKED_get0_revocationDate")
+have_func("X509_REVOKED_set_nextUpdate")
 have_func("X509_NAME_hash_old")
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
@@ -169,6 +172,9 @@ if checking_for('OpenSSL version is 0.9.7 or later') {
     try_static_assert('OPENSSL_VERSION_NUMBER >= 0x00907000L', 'openssl/opensslv.h')
   }
   have_header("openssl/ocsp.h")
+  have_func("OCSP_id_get0_info")
+  have_func("OCSP_SINGLERESP_delete_ext")
+  have_func("OCSP_SINGLERESP_get0_id")
 end
 have_struct_member("CRYPTO_THREADID", "ptr", "openssl/crypto.h")
 have_struct_member("EVP_CIPHER_CTX", "flags", "openssl/evp.h")
