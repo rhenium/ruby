@@ -514,3 +514,34 @@ X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_CRL *crl
 	*palg = &crl->sig_alg;
 }
 #endif
+
+#if !defined(X509_REQ_GET0_SIGNATURE)
+void
+X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ req)
+{
+    if (psig != NULL)
+	*psig = &req->signature;
+    if (palg != NULL)
+	*palg = &ret->sig_alg;
+}
+#endif
+
+#if !defined(X509_REVOKED_GET0_SERIALNUMBER)
+ASN1_INTEGER *
+X509_REVOKED_get0_serialNumber(X509_REVOKED *x)
+{
+    return &x->serialNumber;
+}
+#endif
+
+#if !defined(X509_REVOKED_SET_SERIALNUMBER)
+int
+X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial)
+{
+    ASN1_INTEGER *in = x->serialNumber;
+    if (in != serial)
+        return ASN1_STRING_copy(in, serial);
+    return 1;
+}
+#endif
+

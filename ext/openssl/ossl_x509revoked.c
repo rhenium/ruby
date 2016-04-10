@@ -116,16 +116,18 @@ ossl_x509revoked_get_serial(VALUE self)
 
     GetX509Rev(self, rev);
 
-    return asn1integer_to_num(rev->serialNumber);
+    return asn1integer_to_num(X509_REVOKED_get0_serialNumber(rev));
 }
 
 static VALUE
 ossl_x509revoked_set_serial(VALUE self, VALUE num)
 {
     X509_REVOKED *rev;
+    ASN1_INTEGER *ai;
 
     GetX509Rev(self, rev);
-    rev->serialNumber = num_to_asn1integer(num, rev->serialNumber);
+    ai = X509_REVOKED_get0_serialNumber(rev);
+    X509_REVOKED_set_serialNumber(rev, num_to_asn1integer(num, ai));
 
     return num;
 }

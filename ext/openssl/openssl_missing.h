@@ -221,6 +221,18 @@ void X509_CRL_up_ref(X509_CRL *crl);
 void X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_CRL *crl);
 #endif
 
+#if !defined(X509_REQ_GET0_SIGNATURE)
+void X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ *req);
+#endif
+
+#if !defined(X509_REVOKED_GET0_SERIALNUMBER)
+ASN1_INTEGER *X509_REVOKED_get0_serialNumber(X509_REVOKED *x);
+#endif
+
+#if !defined(X509_REVOKED_SET_SERIALNUMBER)
+int X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif
