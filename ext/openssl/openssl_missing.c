@@ -81,7 +81,18 @@ EVP_MD_CTX_free(EVP_MD_CTX *ctx)
 }
 #endif
 
-#if !defined(HAVE_HMAC_CTX_NEW)
+#if defined(HAVE_HMAC_INIT_EX)
+int
+HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len,
+	     const EVP_MD *md, void *impl)
+{
+    if (impl)
+	rb_bug("impl not supported");
+    return HMAC_Init(ctx, key, key_len, md);
+}
+#endif
+
+#if !defined(HAVE_HMAC_CTX_RESET)
 #if !defined(HAVE_EVP_MD_CTX_INIT)
 static void
 EVP_MD_CTX_init(EVP_MD_CTX *ctx)
@@ -90,13 +101,9 @@ EVP_MD_CTX_init(EVP_MD_CTX *ctx)
 }
 #endif
 
-/* new in 1.1.0 */
-HMAC_CTX *
-HMAC_CTX_new(void)
+int
+HMAC_CTX_reset(HMAC_CTX *ctx)
 {
-    HMAC_CTX *ctx = OPENSSL_malloc(sizeof(HMAC_CTX));
-    if (!ctx)
-	return NULL;
 #if defined(HAVE_HMAC_CTX_INIT)
     HMAC_CTX_init(ctx);
 #else /* 0.9.6 */
@@ -104,6 +111,18 @@ HMAC_CTX_new(void)
     EVP_MD_CTX_init(&ctx->o_ctx);
     EVP_MD_CTX_init(&ctx->md_ctx);
 #endif
+}
+#endif
+
+#if !defined(HAVE_HMAC_CTX_NEW)
+/* new in 1.1.0 */
+HMAC_CTX *
+HMAC_CTX_new(void)
+{
+    HMAC_CTX *ctx = OPENSSL_malloc(sizeof(HMAC_CTX));
+    HMAC_CTX_reset(ctx);
+    if (!ctx)
+	return NULL;
     return ctx;
 }
 #endif
@@ -453,12 +472,64 @@ OCSP_id_get0_info(ASN1_OCTET_STRING **piNameHash, ASN1_OBJECT **pmd,
 }
 #endif
 
-#if !defined(HAVE_EVP_PKEY_id)
+#if !defined(HAVE_OCSP_SINGLERESP_DELETE_EXT)
+X509_EXTENSION *
+OCSP_SINGLERESP_delete_ext(OCSP_SINGLERESP *s, int loc)
+{
+    return sk_X509_EXTENSION_delete(s->singleExtensions, loc);
+}
+#endif
+
+#if !defined(HAVE_OCSP_SINGLEREST_GET0_ID)
+OCSP_CERTID *
+OCSP_SINGLERESP_get0_id(OCSP_SINGLERESP *single)
+{
+    return single->certId;
+}
+#endif
+
+#if !defined(HAVE_EVP_PKEY_id) /* 1.1.0 */
 int
 EVP_PKEY_id(const EVP_PKEY *pkey)
 {
     return pkey->type;
 }
+
+RSA *
+EVP_PKEY_get0_RSA(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_RSA)
+        return NULL;
+    return pkey->pkey.rsa;
+}
+
+DSA *
+EVP_PKEY_get0_DSA(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_DSA)
+        return NULL;
+    return pkey->pkey.dsa;
+}
+
+#if !defined(OPENSSL_NO_EC)
+EC_KEY *
+EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_EC)
+        return NULL;
+    return pkey->pkey.ec;
+}
+#endif
+
+#if !defined(OPENSSL_NO_DH)
+DH *
+EVP_PKEY_get0_DH(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_DH)
+        return NULL;
+    return pkey->pkey.dh;
+}
+#endif
 #endif
 
 #if !defined(HAVE_SSL_SESSION_GET_ID)
@@ -501,6 +572,18 @@ void
 X509_CRL_up_ref(X509_CRL *crl)
 {
     CRYPTO_add(&crl->references, 1, CRYPTO_LOCK_X509_CRL);
+}
+
+void
+SSL_SESSION_up_ref(SSL_SESSION *sess)
+{
+    CRYPTO_add(&sess->references, 1, CRYPTO_LOCK_SSL_SESSION);
+}
+
+void
+EVP_PKEY_up_ref(EVP_PKEY *pkey)
+{
+    CRYPTO_add(&pkey->references, 1, CRYPTO_LOCK_EVP_PKEY);
 }
 #endif
 

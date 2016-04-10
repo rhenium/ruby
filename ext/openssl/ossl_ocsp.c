@@ -708,8 +708,9 @@ ossl_ocspbres_add_status(VALUE self, VALUE cid, VALUE status,
 
     if(!NIL_P(ext)){
 	X509_EXTENSION *x509ext;
-	sk_X509_EXTENSION_pop_free(single->singleExtensions, X509_EXTENSION_free);
-	single->singleExtensions = NULL;
+	while ((x509ext = OCSP_SINGLERESP_delete_ext(single, 0))) {
+	    X509_EXTENSION_free(x509ext);
+	}
 	for(i = 0; i < RARRAY_LEN(ext); i++){
 	    x509ext = DupX509ExtPtr(RARRAY_AREF(ext, i));
 	    if(!OCSP_SINGLERESP_add_ext(single, x509ext, -1)){
@@ -764,7 +765,7 @@ ossl_ocspbres_get_status(VALUE self)
 	status = OCSP_single_get0_status(single, &reason, &revtime,
 					 &thisupd, &nextupd);
 	if(status < 0) continue;
-	if(!(cid = OCSP_CERTID_dup(single->certId)))
+	if(!(cid = OCSP_CERTID_dup(OCSP_SINGLERESP_get0_id(single))))
 	    ossl_raise(eOCSPError, NULL);
 	ary = rb_ary_new();
 	rb_ary_push(ary, ossl_ocspcertid_new(cid));

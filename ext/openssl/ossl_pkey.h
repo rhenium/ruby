@@ -100,7 +100,7 @@ VALUE ossl_ec_new(EVP_PKEY *);
 void Init_ossl_ec(void);
 
 
-#define OSSL_PKEY_BN(keytype, name)					\
+#define OSSL_PKEY_BN(keytype, type, name)				\
 /*									\
  *  call-seq:								\
  *     key.##name -> aBN						\
@@ -111,7 +111,7 @@ static VALUE ossl_##keytype##_get_##name(VALUE self)			\
 	BIGNUM *bn;							\
 									\
 	GetPKey(self, pkey);						\
-	bn = pkey->pkey.keytype->name;					\
+	bn = EVP_PKEY_get0_##type(pkey)->name;				\
 	if (bn == NULL)							\
 		return Qnil;						\
 	return ossl_bn_new(bn);						\
@@ -124,20 +124,22 @@ static VALUE ossl_##keytype##_set_##name(VALUE self, VALUE bignum)	\
 {									\
 	EVP_PKEY *pkey;							\
 	BIGNUM *bn;							\
+	type *obj;							\
 									\
 	GetPKey(self, pkey);						\
+	obj = EVP_PKEY_get0_##type(pkey);				\
 	if (NIL_P(bignum)) {						\
-		BN_clear_free(pkey->pkey.keytype->name);		\
-		pkey->pkey.keytype->name = NULL;			\
+		BN_clear_free(obj->name);				\
+		obj->name = NULL;					\
 		return Qnil;						\
 	}								\
 									\
 	bn = GetBNPtr(bignum);						\
-	if (pkey->pkey.keytype->name == NULL)				\
-		pkey->pkey.keytype->name = BN_new();			\
-	if (pkey->pkey.keytype->name == NULL)				\
+	if (obj->name == NULL)						\
+		obj->name = BN_new();					\
+	if (obj->name == NULL)						\
 		ossl_raise(eBNError, NULL);				\
-	if (BN_copy(pkey->pkey.keytype->name, bn) == NULL)		\
+	if (BN_copy(obj->name, bn) == NULL)				\
 		ossl_raise(eBNError, NULL);				\
 	return bignum;							\
 }

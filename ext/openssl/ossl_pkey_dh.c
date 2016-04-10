@@ -13,7 +13,7 @@
 
 #define GetPKeyDH(obj, pkey) do { \
     GetPKey((obj), (pkey)); \
-    if (EVP_PKEY_type((pkey)->type) != EVP_PKEY_DH) { /* PARANOIA? */ \
+    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_DH) { /* PARANOIA? */ \
 	ossl_raise(rb_eRuntimeError, "THIS IS NOT A DH!") ; \
     } \
 } while (0)
@@ -110,7 +110,7 @@ dh_generate(int size, int gen)
     BN_GENCB *cb = BN_GENCB_new();
 
     if (!dh || !cb) {
-	if (dh) DH_free(e);
+	if (dh) DH_free(dh);
 	if (cb) BN_GENCB_free(cb);
 	return 0;
     }
@@ -262,7 +262,7 @@ ossl_dh_is_public(VALUE self)
 
     GetPKeyDH(self, pkey);
 
-    return (pkey->pkey.dh->pub_key) ? Qtrue : Qfalse;
+    return EVP_PKEY_get0_DH(pkey)->pub_key ? Qtrue : Qfalse;
 }
 
 /*
@@ -279,7 +279,7 @@ ossl_dh_is_private(VALUE self)
 
     GetPKeyDH(self, pkey);
 
-    return (DH_PRIVATE(pkey->pkey.dh)) ? Qtrue : Qfalse;
+    return DH_PRIVATE(EVP_PKEY_get0_DH(pkey)) ? Qtrue : Qfalse;
 }
 
 /*
@@ -303,7 +303,7 @@ ossl_dh_export(VALUE self)
     if (!(out = BIO_new(BIO_s_mem()))) {
 	ossl_raise(eDHError, NULL);
     }
-    if (!PEM_write_bio_DHparams(out, pkey->pkey.dh)) {
+    if (!PEM_write_bio_DHparams(out, EVP_PKEY_get0_DH(pkey))) {
 	BIO_free(out);
 	ossl_raise(eDHError, NULL);
     }
@@ -330,11 +330,11 @@ ossl_dh_to_der(VALUE self)
     VALUE str;
 
     GetPKeyDH(self, pkey);
-    if((len = i2d_DHparams(pkey->pkey.dh, NULL)) <= 0)
+    if((len = i2d_DHparams(EVP_PKEY_get0_DH(pkey), NULL)) <= 0)
 	ossl_raise(eDHError, NULL);
     str = rb_str_new(0, len);
     p = (unsigned char *)RSTRING_PTR(str);
-    if(i2d_DHparams(pkey->pkey.dh, &p) < 0)
+    if(i2d_DHparams(EVP_PKEY_get0_DH(pkey), &p) < 0)
 	ossl_raise(eDHError, NULL);
     ossl_str_adjust(str, p);
 
@@ -354,15 +354,17 @@ ossl_dh_get_params(VALUE self)
 {
     EVP_PKEY *pkey;
     VALUE hash;
+    DH *dh;
 
     GetPKeyDH(self, pkey);
 
     hash = rb_hash_new();
 
-    rb_hash_aset(hash, rb_str_new2("p"), ossl_bn_new(pkey->pkey.dh->p));
-    rb_hash_aset(hash, rb_str_new2("g"), ossl_bn_new(pkey->pkey.dh->g));
-    rb_hash_aset(hash, rb_str_new2("pub_key"), ossl_bn_new(pkey->pkey.dh->pub_key));
-    rb_hash_aset(hash, rb_str_new2("priv_key"), ossl_bn_new(pkey->pkey.dh->priv_key));
+    dh = EVP_PKEY_get0_DH(pkey);
+    rb_hash_aset(hash, rb_str_new2("p"), ossl_bn_new(dh->p));
+    rb_hash_aset(hash, rb_str_new2("g"), ossl_bn_new(dh->g));
+    rb_hash_aset(hash, rb_str_new2("pub_key"), ossl_bn_new(dh->pub_key));
+    rb_hash_aset(hash, rb_str_new2("priv_key"), ossl_bn_new(dh->priv_key));
 
     return hash;
 }
@@ -386,7 +388,7 @@ ossl_dh_to_text(VALUE self)
     if (!(out = BIO_new(BIO_s_mem()))) {
 	ossl_raise(eDHError, NULL);
     }
-    if (!DHparams_print(out, pkey->pkey.dh)) {
+    if (!DHparams_print(out, EVP_PKEY_get0_DH(pkey))) {
 	BIO_free(out);
 	ossl_raise(eDHError, NULL);
     }
@@ -424,7 +426,7 @@ ossl_dh_to_public_key(VALUE self)
     VALUE obj;
 
     GetPKeyDH(self, pkey);
-    dh = DHparams_dup(pkey->pkey.dh); /* err check perfomed by dh_instance */
+    dh = DHparams_dup(EVP_PKEY_get0_DH(pkey)); /* err check perfomed by dh_instance */
     obj = dh_instance(CLASS_OF(self), dh);
     if (obj == Qfalse) {
 	DH_free(dh);
@@ -450,7 +452,7 @@ ossl_dh_check_params(VALUE self)
     int codes;
 
     GetPKeyDH(self, pkey);
-    dh = pkey->pkey.dh;
+    dh = EVP_PKEY_get0_DH(pkey);
 
     if (!DH_check(dh, &codes)) {
 	return Qfalse;
@@ -482,7 +484,7 @@ ossl_dh_generate_key(VALUE self)
     EVP_PKEY *pkey;
 
     GetPKeyDH(self, pkey);
-    dh = pkey->pkey.dh;
+    dh = EVP_PKEY_get0_DH(pkey);
 
     if (!DH_generate_key(dh))
 	ossl_raise(eDHError, "Failed to generate key");
@@ -510,7 +512,7 @@ ossl_dh_compute_key(VALUE self, VALUE pub)
     int len;
 
     GetPKeyDH(self, pkey);
-    dh = pkey->pkey.dh;
+    dh = EVP_PKEY_get0_DH(pkey);
     pub_key = GetBNPtr(pub);
     len = DH_size(dh);
     str = rb_str_new(0, len);
@@ -522,10 +524,10 @@ ossl_dh_compute_key(VALUE self, VALUE pub)
     return str;
 }
 
-OSSL_PKEY_BN(dh, p)
-OSSL_PKEY_BN(dh, g)
-OSSL_PKEY_BN(dh, pub_key)
-OSSL_PKEY_BN(dh, priv_key)
+OSSL_PKEY_BN(dh, DH, p)
+OSSL_PKEY_BN(dh, DH, g)
+OSSL_PKEY_BN(dh, DH, pub_key)
+OSSL_PKEY_BN(dh, DH, priv_key)
 
 /*
  * INIT

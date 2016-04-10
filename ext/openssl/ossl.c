@@ -7,7 +7,6 @@
  * This program is licensed under the same licence as Ruby.
  * (See the file 'LICENCE'.)
  */
-#define OPENSSL_MIN_API 0x20000000L
 #include "ossl.h"
 #include <stdarg.h> /* for ossl_raise */
 /*

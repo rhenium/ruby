@@ -218,7 +218,7 @@ ossl_x509attr_set_value(VALUE self, VALUE value)
 	attr = new_attr;
     }
 
-    if (!X509_ATTRIBUTE_set1_data(attr, ASN1_TYPE_get(a1type), a1type->value)) {
+    if (!X509_ATTRIBUTE_set1_data(attr, ASN1_TYPE_get(a1type), a1type->value.ptr, -1)) {
 	ASN1_TYPE_free(a1type);
 	ossl_raise(eX509AttrError, "X509_ATTRIBUTE_set1_data() failed");
     }

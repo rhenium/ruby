@@ -143,7 +143,10 @@ ossl_cipher_copy(VALUE self, VALUE other)
 
     GetCipherInit(self, ctx1);
     if (!ctx1) {
-	AllocCipher(self, ctx1);
+	ctx1 = EVP_CIPHER_CTX_new();
+	if (!ctx1)
+	    ossl_raise(rb_eRuntimeError, "EVP_CIPHER_CTX_new() failed");
+	RTYPEDDATA_DATA(self) = ctx1;
     }
     SafeGetCipher(other, ctx2);
     if (EVP_CIPHER_CTX_copy(ctx1, ctx2) != 1)

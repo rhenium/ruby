@@ -95,6 +95,8 @@ have_func("HMAC_CTX_new")
 have_func("HMAC_CTX_init") # for 0.9.6
 have_func("HMAC_CTX_free")
 have_func("HMAC_CTX_cleanup") # for 0.9.6
+have_func("HMAC_CTX_reset")
+have_func("HMAC_Init_ex")
 have_func("HMAC_CTX_copy")
 have_func("PEM_def_callback")
 have_func("PKCS5_PBKDF2_HMAC")
@@ -132,6 +134,7 @@ have_func("TLSv1_2_server_method")
 have_func("TLSv1_2_client_method")
 have_func("SSL_CTX_set_alpn_select_cb")
 have_func("SSL_CTX_set_next_proto_select_cb")
+have_func("SSL_CTX_set_tmp_ecdh_callback") # workaround: 1.1.0 removed this
 have_macro("SSL_get_server_tmp_key", ['openssl/ssl.h']) && $defs.push("-DHAVE_SSL_GET_SERVER_TMP_KEY")
 unless have_func("SSL_set_tlsext_host_name", ['openssl/ssl.h'])
   have_macro("SSL_set_tlsext_host_name", ['openssl/ssl.h']) && $defs.push("-DHAVE_SSL_SET_TLSEXT_HOST_NAME")

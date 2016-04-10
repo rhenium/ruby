@@ -761,7 +761,7 @@ ossl_bn_s_generate_prime(int argc, VALUE *argv, VALUE klass)
     if (!(result = BN_new())) {
 	ossl_raise(eBNError, NULL);
     }
-    if (!BN_generate_prime_ex(result, num, safe, add, rem, NULL, NULL)) {
+    if (!BN_generate_prime_ex(result, num, safe, add, rem, NULL)) {
 	BN_free(result);
 	ossl_raise(eBNError, NULL);
     }

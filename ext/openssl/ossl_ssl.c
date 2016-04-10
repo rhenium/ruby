@@ -82,6 +82,8 @@ static VALUE sym_exception, sym_wait_readable, sym_wait_writable;
 /*
  * SSLContext class
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 static const struct {
     const char *name;
     SSL_METHOD *(*func)(void);
@@ -119,6 +121,7 @@ static const struct {
     OSSL_SSL_METHOD_ENTRY(SSLv23_client),
 #undef OSSL_SSL_METHOD_ENTRY
 };
+#pragma GCC diagnostic pop
 
 static int ossl_ssl_ex_vcb_idx;
 static int ossl_ssl_ex_store_p;
@@ -128,8 +131,10 @@ static void
 ossl_sslctx_free(void *ptr)
 {
     SSL_CTX *ctx = ptr;
+#if !defined(HAVE_X509_UP_REF) /* upto 1.0.2 */
     if(ctx && SSL_CTX_get_ex_data(ctx, ossl_ssl_ex_store_p)== (void*)1)
 	ctx->cert_store = NULL;
+#endif
     SSL_CTX_free(ctx);
 }
 
@@ -244,7 +249,7 @@ ossl_call_tmp_dh_callback(VALUE args)
     if (NIL_P(cb)) return Qfalse;
     dh = rb_apply(cb, rb_intern("call"), args);
     pkey = GetPKeyPtr(dh);
-    if (EVP_PKEY_type(pkey->type) != EVP_PKEY_DH) return Qfalse;
+    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_DH) return Qfalse;
 
     return dh;
 }
@@ -262,11 +267,11 @@ ossl_tmp_dh_callback(SSL *ssl, int is_export, int keylength)
     if (!RTEST(dh)) return NULL;
     ossl_ssl_set_tmp_dh(rb_ssl, dh);
 
-    return GetPKeyPtr(dh)->pkey.dh;
+    return EVP_PKEY_get0_DH(GetPKeyPtr(dh));
 }
 #endif /* OPENSSL_NO_DH */
 
-#if !defined(OPENSSL_NO_EC)
+#if defined(SSL_CTX_SET_TMP_ECDH_CALLBACK)
 static VALUE
 ossl_call_tmp_ecdh_callback(VALUE args)
 {
@@ -278,7 +283,7 @@ ossl_call_tmp_ecdh_callback(VALUE args)
     if (NIL_P(cb)) return Qfalse;
     ecdh = rb_apply(cb, rb_intern("call"), args);
     pkey = GetPKeyPtr(ecdh);
-    if (EVP_PKEY_type(pkey->type) != EVP_PKEY_EC) return Qfalse;
+    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_EC) return Qfalse;
 
     return ecdh;
 }
@@ -296,7 +301,7 @@ ossl_tmp_ecdh_callback(SSL *ssl, int is_export, int keylength)
     if (!RTEST(ecdh)) return NULL;
     ossl_ssl_set_tmp_ecdh(rb_ssl, ecdh);
 
-    return GetPKeyPtr(ecdh)->pkey.ec;
+    return EVP_PKEY_get0_EC_KEY(GetPKeyPtr(ecdh));
 }
 #endif
 
@@ -385,7 +390,7 @@ ossl_sslctx_session_new_cb(SSL *ssl, SSL_SESSION *sess)
     	return 1;
     ssl_obj = (VALUE)ptr;
     sess_obj = rb_obj_alloc(cSSLSession);
-    CRYPTO_add(&sess->references, 1, CRYPTO_LOCK_SSL_SESSION);
+    SSL_SESSION_up_ref(sess);
     DATA_PTR(sess_obj) = sess;
 
     ary = rb_ary_new2(2);
@@ -434,7 +439,7 @@ ossl_sslctx_session_remove_cb(SSL_CTX *ctx, SSL_SESSION *sess)
     	return;
     sslctx_obj = (VALUE)ptr;
     sess_obj = rb_obj_alloc(cSSLSession);
-    CRYPTO_add(&sess->references, 1, CRYPTO_LOCK_SSL_SESSION);
+    SSL_SESSION_up_ref(sess);
     DATA_PTR(sess_obj) = sess;
 
     ary = rb_ary_new2(2);
@@ -642,7 +647,7 @@ ssl_alpn_select_cb(SSL *ssl, const unsigned char **out, unsigned char *outlen, c
 static void
 ssl_info_cb(const SSL *ssl, int where, int val)
 {
-    int state = SSL_state(ssl);
+    int state = SSL_get_state(ssl);
 
     if ((where & SSL_CB_HANDSHAKE_START) &&
 	(state & SSL_ST_ACCEPT)) {
@@ -711,7 +716,7 @@ ossl_sslctx_setup(VALUE self)
     SSL_CTX_set_tmp_dh_callback(ctx, ossl_tmp_dh_callback);
 #endif
 
-#if !defined(OPENSSL_NO_EC)
+#if defined(SSL_CTX_SET_TMP_ECDH_CALLBACK)
     if (RTEST(ossl_sslctx_get_tmp_ecdh_cb(self))){
 	SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
     }
@@ -719,15 +724,19 @@ ossl_sslctx_setup(VALUE self)
 
     val = ossl_sslctx_get_cert_store(self);
     if(!NIL_P(val)){
+        store = GetX509StorePtr(val); /* NO NEED TO DUP */
+#if defined(HAVE_X509_UP_REF) /* from 1.1.0 */
+	X509_STORE_up_ref(store);
+#else
 	/*
-         * WORKAROUND:
+         * WORKAROUND (- 1.0.2):
 	 *   X509_STORE can count references, but
 	 *   X509_STORE_free() doesn't care it.
 	 *   So we won't increment it but mark it by ex_data.
 	 */
-        store = GetX509StorePtr(val); /* NO NEED TO DUP */
-        SSL_CTX_set_cert_store(ctx, store);
         SSL_CTX_set_ex_data(ctx, ossl_ssl_ex_store_p, (void*)1);
+#endif
+        SSL_CTX_set_cert_store(ctx, store);
     }
 
     val = ossl_sslctx_get_extra_cert(self);
@@ -882,6 +891,7 @@ static VALUE
 ossl_sslctx_get_ciphers(VALUE self)
 {
     SSL_CTX *ctx;
+    SSL *temp_ssl;
     STACK_OF(SSL_CIPHER) *ciphers;
     SSL_CIPHER *cipher;
     VALUE ary;
@@ -892,7 +902,13 @@ ossl_sslctx_get_ciphers(VALUE self)
         rb_warning("SSL_CTX is not initialized.");
         return Qnil;
     }
-    ciphers = ctx->cipher_list;
+    /* SSL_CTX was made opaque so we can't access ctx->cipher_list directly :( */
+    temp_ssl = SSL_new(ctx);
+    if (!temp_ssl)
+	ossl_raise(eSSLError, "SSL_new() failed");
+
+    ciphers = SSL_get_ciphers(temp_ssl);
+    SSL_free(temp_ssl);
 
     if (!ciphers)
         return rb_ary_new();
