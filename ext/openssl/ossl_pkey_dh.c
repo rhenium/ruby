@@ -18,15 +18,6 @@
     } \
 } while (0)
 
-#define DH_HAS_PRIVATE(dh) ((dh)->priv_key)
-
-#ifdef OSSL_ENGINE_ENABLED
-#  define DH_PRIVATE(dh) (DH_HAS_PRIVATE(dh) || (dh)->engine)
-#else
-#  define DH_PRIVATE(dh) DH_HAS_PRIVATE(dh)
-#endif
-
-
 /*
  * Classes
  */
@@ -259,10 +250,12 @@ static VALUE
 ossl_dh_is_public(VALUE self)
 {
     EVP_PKEY *pkey;
+    BIGNUM *pub_key;
 
     GetPKeyDH(self, pkey);
+    DH_get0_key(EVP_PKEY_get0_DH(pkey), &pub_key, NULL);
 
-    return EVP_PKEY_get0_DH(pkey)->pub_key ? Qtrue : Qfalse;
+    return pub_key ? Qtrue : Qfalse;
 }
 
 /*
@@ -276,11 +269,20 @@ static VALUE
 ossl_dh_is_private(VALUE self)
 {
     EVP_PKEY *pkey;
+    DH *dh;
+    BIGNUM *priv_key;
 
     GetPKeyDH(self, pkey);
+    dh = EVP_PKEY_get0_DH(pkey);
+    DH_get0_key(dh, NULL, &priv_key);
 
-    return DH_PRIVATE(EVP_PKEY_get0_DH(pkey)) ? Qtrue : Qfalse;
+#ifdef OSSL_ENGINE_ENABLED
+    return (priv_key || DH_get0_engine(dh)) ? Qtrue : Qfalse;
+#else
+    return priv_key ? Qtrue : Qfalse;
+#endif
 }
+
 
 /*
  *  call-seq:
@@ -355,16 +357,20 @@ ossl_dh_get_params(VALUE self)
     EVP_PKEY *pkey;
     VALUE hash;
     DH *dh;
+    BIGNUM *pub_key, *priv_key;
+    BIGNUM *p, *g;
 
     GetPKeyDH(self, pkey);
 
-    hash = rb_hash_new();
-
     dh = EVP_PKEY_get0_DH(pkey);
-    rb_hash_aset(hash, rb_str_new2("p"), ossl_bn_new(dh->p));
-    rb_hash_aset(hash, rb_str_new2("g"), ossl_bn_new(dh->g));
-    rb_hash_aset(hash, rb_str_new2("pub_key"), ossl_bn_new(dh->pub_key));
-    rb_hash_aset(hash, rb_str_new2("priv_key"), ossl_bn_new(dh->priv_key));
+    DH_get0_key(dh, &pub_key, &priv_key);
+    DH_get0_pqg(dh, &p, NULL, &g);
+
+    hash = rb_hash_new();
+    rb_hash_aset(hash, rb_str_new2("p"), ossl_bn_new(p));
+    rb_hash_aset(hash, rb_str_new2("g"), ossl_bn_new(g));
+    rb_hash_aset(hash, rb_str_new2("pub_key"), ossl_bn_new(pub_key));
+    rb_hash_aset(hash, rb_str_new2("priv_key"), ossl_bn_new(priv_key));
 
     return hash;
 }
@@ -524,10 +530,8 @@ ossl_dh_compute_key(VALUE self, VALUE pub)
     return str;
 }
 
-OSSL_PKEY_BN(dh, DH, p)
-OSSL_PKEY_BN(dh, DH, g)
-OSSL_PKEY_BN(dh, DH, pub_key)
-OSSL_PKEY_BN(dh, DH, priv_key)
+OSSL_PKEY_BN3(dh, DH, pqg, p, q, g)
+OSSL_PKEY_BN2(dh, DH, key, pub_key, priv_key)
 
 /*
  * INIT

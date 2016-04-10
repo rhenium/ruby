@@ -18,7 +18,13 @@
     } \
 } while (0)
 
-#define RSA_HAS_PRIVATE(rsa) ((rsa)->p && (rsa)->q)
+static inline int
+RSA_HAS_PRIVATE(RSA *rsa)
+{
+    BIGNUM *p, *q;
+    RSA_get0_factors(rsa, &p, &q);
+    return p && q;
+}
 #define RSA_PRIVATE(obj,rsa) (RSA_HAS_PRIVATE(rsa)||OSSL_PKEY_IS_PRIVATE(obj))
 
 /*
@@ -514,19 +520,27 @@ ossl_rsa_get_params(VALUE self)
 {
     EVP_PKEY *pkey;
     VALUE hash;
+    RSA *rsa;
+    BIGNUM *n, *e, *d;
+    BIGNUM *p, *q;
+    BIGNUM *dmp1, *dmq1, *iqmp;
 
     GetPKeyRSA(self, pkey);
 
-    hash = rb_hash_new();
+    rsa = EVP_PKEY_get0_RSA(pkey);
+    RSA_get0_key(rsa, &n, &e, &d);
+    RSA_get0_factors(rsa, &p, &q);
+    RSA_get0_crt_params(rsa, &dmp1, &dmq1, &iqmp);
 
-    rb_hash_aset(hash, rb_str_new2("n"), ossl_bn_new(EVP_PKEY_get0_RSA(pkey)->n));
-    rb_hash_aset(hash, rb_str_new2("e"), ossl_bn_new(EVP_PKEY_get0_RSA(pkey)->e));
-    rb_hash_aset(hash, rb_str_new2("d"), ossl_bn_new(EVP_PKEY_get0_RSA(pkey)->d));
-    rb_hash_aset(hash, rb_str_new2("p"), ossl_bn_new(EVP_PKEY_get0_RSA(pkey)->p));
-    rb_hash_aset(hash, rb_str_new2("q"), ossl_bn_new(EVP_PKEY_get0_RSA(pkey)->q));
-    rb_hash_aset(hash, rb_str_new2("dmp1"), ossl_bn_new(EVP_PKEY_get0_RSA(pkey)->dmp1));
-    rb_hash_aset(hash, rb_str_new2("dmq1"), ossl_bn_new(EVP_PKEY_get0_RSA(pkey)->dmq1));
-    rb_hash_aset(hash, rb_str_new2("iqmp"), ossl_bn_new(EVP_PKEY_get0_RSA(pkey)->iqmp));
+    hash = rb_hash_new();
+    rb_hash_aset(hash, rb_str_new2("n"), ossl_bn_new(n));
+    rb_hash_aset(hash, rb_str_new2("e"), ossl_bn_new(e));
+    rb_hash_aset(hash, rb_str_new2("d"), ossl_bn_new(d));
+    rb_hash_aset(hash, rb_str_new2("p"), ossl_bn_new(p));
+    rb_hash_aset(hash, rb_str_new2("q"), ossl_bn_new(q));
+    rb_hash_aset(hash, rb_str_new2("dmp1"), ossl_bn_new(dmp1));
+    rb_hash_aset(hash, rb_str_new2("dmq1"), ossl_bn_new(dmq1));
+    rb_hash_aset(hash, rb_str_new2("iqmp"), ossl_bn_new(iqmp));
 
     return hash;
 }
@@ -613,14 +627,9 @@ ossl_rsa_blinding_off(VALUE self)
 }
  */
 
-OSSL_PKEY_BN(rsa, RSA, n)
-OSSL_PKEY_BN(rsa, RSA, e)
-OSSL_PKEY_BN(rsa, RSA, d)
-OSSL_PKEY_BN(rsa, RSA, p)
-OSSL_PKEY_BN(rsa, RSA, q)
-OSSL_PKEY_BN(rsa, RSA, dmp1)
-OSSL_PKEY_BN(rsa, RSA, dmq1)
-OSSL_PKEY_BN(rsa, RSA, iqmp)
+OSSL_PKEY_BN3(rsa, RSA, key, n, e, d)
+OSSL_PKEY_BN2(rsa, RSA, factors, p, q)
+OSSL_PKEY_BN3(rsa, RSA, crt_params, dmp1, dmq1, iqmp)
 
 /*
  * INIT

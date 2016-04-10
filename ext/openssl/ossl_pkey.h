@@ -99,8 +99,8 @@ extern VALUE eEC_POINT;
 VALUE ossl_ec_new(EVP_PKEY *);
 void Init_ossl_ec(void);
 
-
-#define OSSL_PKEY_BN(keytype, type, name)				\
+/* yes this is very ugly :( */
+#define OSSL_PKEY_BN_DEF_FUNC(keytype, type, name, b1, b2, b3, get, set)\
 /*									\
  *  call-seq:								\
  *     key.##name -> aBN						\
@@ -108,13 +108,13 @@ void Init_ossl_ec(void);
 static VALUE ossl_##keytype##_get_##name(VALUE self)			\
 {									\
 	EVP_PKEY *pkey;							\
-	BIGNUM *bn;							\
+	BIGNUM *b1, *b2, *b3;						\
+	type *obj;							\
 									\
 	GetPKey(self, pkey);						\
-	bn = EVP_PKEY_get0_##type(pkey)->name;				\
-	if (bn == NULL)							\
-		return Qnil;						\
-	return ossl_bn_new(bn);						\
+	obj = EVP_PKEY_get0_##type(pkey);				\
+	get;								\
+	return ossl_bn_new(name);					\
 }									\
 /*									\
  *  call-seq:								\
@@ -123,26 +123,45 @@ static VALUE ossl_##keytype##_get_##name(VALUE self)			\
 static VALUE ossl_##keytype##_set_##name(VALUE self, VALUE bignum)	\
 {									\
 	EVP_PKEY *pkey;							\
-	BIGNUM *bn;							\
+	BIGNUM *b1, *b2, *b3;						\
+	BIGNUM *old;							\
 	type *obj;							\
 									\
 	GetPKey(self, pkey);						\
 	obj = EVP_PKEY_get0_##type(pkey);				\
-	if (NIL_P(bignum)) {						\
-		BN_clear_free(obj->name);				\
-		obj->name = NULL;					\
-		return Qnil;						\
+	get; /* get current value */					\
+	old = name;							\
+	if (NIL_P(bignum))						\
+		name = NULL;						\
+	else if (!(name = BN_dup(GetBNPtr(bignum))))			\
+		ossl_raise(eBNError, NULL);				\
+	if (!(set)) {							\
+		if (name) BN_clear_free(name);				\
+	    rb_bug("xx %d %d", !!b1, !!b2);\
+		ossl_raise(eBNError, "priv_key set failed");		\
 	}								\
-									\
-	bn = GetBNPtr(bignum);						\
-	if (obj->name == NULL)						\
-		obj->name = BN_new();					\
-	if (obj->name == NULL)						\
-		ossl_raise(eBNError, NULL);				\
-	if (BN_copy(obj->name, bn) == NULL)				\
-		ossl_raise(eBNError, NULL);				\
+	BN_clear_free(old);						\
 	return bignum;							\
 }
+
+#define OSSL_PKEY_BN3(keytype, type, func_name, a1, a2, a3)		\
+	OSSL_PKEY_BN_DEF_FUNC(keytype, type, a1, a1, a2, a3,		\
+		type##_get0_##func_name(obj, &a1, &a2, &a3),		\
+		type##_set0_##func_name(obj, a1, a2, a3))		\
+	OSSL_PKEY_BN_DEF_FUNC(keytype, type, a2, a1, a2, a3,		\
+		type##_get0_##func_name(obj, &a1, &a2, &a3),		\
+		type##_set0_##func_name(obj, a1, a2, a3))		\
+	OSSL_PKEY_BN_DEF_FUNC(keytype, type, a3, a1, a2, a3,		\
+		type##_get0_##func_name(obj, &a1, &a2, &a3),		\
+		type##_set0_##func_name(obj, a1, a2, a3))
+
+#define OSSL_PKEY_BN2(keytype, type, func_name, a1, a2)			\
+	OSSL_PKEY_BN_DEF_FUNC(keytype, type, a1, a1, a2, unused,	\
+		type##_get0_##func_name(obj, &a1, &a2),			\
+		type##_set0_##func_name(obj, a1, a2))			\
+	OSSL_PKEY_BN_DEF_FUNC(keytype, type, a2, a1, a2, unused,	\
+		type##_get0_##func_name(obj, &a1, &a2),			\
+		type##_set0_##func_name(obj, a1, a2))
 
 #define DEF_OSSL_PKEY_BN(class, keytype, name)				\
 do {									\

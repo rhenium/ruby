@@ -263,6 +263,32 @@ int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b);
 #  define EVP_PKEY_get0_DSA(p) (p->pkey.dsa)
 #  define EVP_PKEY_get0_EC_KEY(p) (p->pkey.ec)
 #  define EVP_PKEY_get0_DH(p) (p->pkey.dh)
+
+#  define RSA_get0_engine(p) (p->engine)
+#  define RSA_get0_key(p, pn, pe, pd) do {	\
+	if (pn) *pn = p->n;			\
+	if (pe) *pe = p->e;			\
+	if (pd) *pd = p->d; }
+#  define RSA_get0_factors(p, pp, pq) do {	\
+	if (pp) *pp = p->p;			\
+	if (pq) *pq = p->q; }
+#  define RSA_get0_crt_params(p, pdmp1, pdmq1, piqmp) do {\
+	if (pdmp1) *pdmp1 = p->dmp1;		\
+	if (pdmq1) *pdmq1 = p->dmq1;		\
+	if (piqmp) *piqmp = p->iqmp; }
+
+#  define DSA_get0_engine(p) (p->engine)
+#  define DSA_get0_key(p, ppub, ppriv) do {	\
+	if (ppub) *ppub = p->pub_key;		\
+	if (ppriv) *ppriv = p->priv_key; }
+#  define DSA_get0_pqg(p, pp, pq, pg) do {	\
+	if (pp) *pp = p->p;			\
+	if (pq) *pq = p->q;			\
+	if (pg) *pg = p->g; }
+
+#  define DH_get0_engine(p) (p->engine)
+#  define DH_get0_key(p, ppub, ppriv) DSA_get0_key(p, ppub, ppriv)
+#  define DH_get0_pqg(p, pp, pq, pg) DSA_get0_pqg(p, pp, pq, pg)
 #endif
 
 /* HMAC */
