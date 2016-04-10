@@ -271,7 +271,7 @@ ossl_tmp_dh_callback(SSL *ssl, int is_export, int keylength)
 }
 #endif /* OPENSSL_NO_DH */
 
-#if defined(SSL_CTX_SET_TMP_ECDH_CALLBACK)
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
 static VALUE
 ossl_call_tmp_ecdh_callback(VALUE args)
 {
@@ -720,7 +720,7 @@ ossl_sslctx_setup(VALUE self)
     SSL_CTX_set_tmp_dh_callback(ctx, ossl_tmp_dh_callback);
 #endif
 
-#if defined(SSL_CTX_SET_TMP_ECDH_CALLBACK)
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
     if (RTEST(ossl_sslctx_get_tmp_ecdh_cb(self))){
 	SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
     }
