@@ -1632,7 +1632,7 @@ ossl_ssl_stop(VALUE self)
 
     if (ssl) {
 	ossl_ssl_shutdown(ssl);
-	SSL_free(ssl);
+	//SSL_free(ssl);
     }
     DATA_PTR(self) = NULL;
 

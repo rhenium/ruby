@@ -85,6 +85,21 @@ Q1VB8qkJN7rA7/2HrCR3gTsWNb1YhAsnFsoeRscC+LxXoXi9OAIUBG98h4tilg6S
 -----END DSA PRIVATE KEY-----
   _end_of_pem_
 
+  TEST_KEY_DSA1024 = OpenSSL::PKey::DSA.new <<-_end_of_pem_
+-----BEGIN DSA PRIVATE KEY-----
+MIIBugIBAAKBgQCH9aAoXvWWThIjkA6D+nI1F9ksF9iDq594rkiGNOT9sPDOdB+n
+D+qeeeeloRlj19ymCSADPI0ZLRgkchkAEnY2RnqnhHOjVf/roGgRbW+iQDMbQ9wa
+/pvc6/fAbsu1goE1hBYjm98/sZEeXavj8tR56IXnjF1b6Nx0+sgeUKFKEQIVAMiz
+4BJUFeTtddyM4uadBM7HKLPRAoGAZdLBSYNGiij7vAjesF5mGUKTIgPd+JKuBEDx
+OaBclsgfdoyoF/TMOkIty+PVlYD+//Vl2xnoUEIRaMXHwHfm0r2xUX++oeRaSScg
+YizJdUxe5jvBuBszGPRc/mGpb9YvP0sB+FL1KmuxYmdODfCe51zl8uM/CVhouJ3w
+DjmRGscCgYAuFlfC7p+e8huCKydfcv/beftqjewiOPpQ3u5uI6KPCtCJPpDhs3+4
+IihH2cPsAlqwGF4tlibW1+/z/OZ1AZinPK3y7b2jSJASEaPeEltVzB92hcd1khk2
+jTYcmSsV4VddplOPK9czytR/GbbibxsrhhgZUbd8LPbvIgaiadJ1PgIUBnJ/5vN2
+CVArsEzlPUCbohPvZnE=
+-----END DSA PRIVATE KEY-----
+  _end_of_pem_
+
 if defined?(OpenSSL::PKey::EC)
 
   TEST_KEY_EC_P256V1 = OpenSSL::PKey::EC.new <<-_end_of_pem_
@@ -105,6 +120,8 @@ AQjjxMXhwULlmuR/K+WwlaZPiLIBYalLAZQ7ZbOPeVkJ8ePao0eLAgEC
 -----END DH PARAMETERS-----
   _end_of_pem_
 
+  # WORKAROUND: OpenSSL 1.1.0-pre4 requires pub_key to be set
+  TEST_KEY_DH1024.pub_key = OpenSSL::BN.new("556af1598ae69899867ceba9f29ce4862b884c2b43c9019ea0231908f6efa785e3c462a6ecb16df676866e997ffb72b487dc7967c58c3ca38ce974473bf19b2aa5dcbf102735572eba6f353f6f0bbe7ff1de1b07fe1381a355c275c33405004317f9491b5955f191f6615a63b30e55a027fb88a1a4b25608e09eee68a7df32d", 16)
   TEST_KEY_DH1024.priv_key = OpenSSL::BN.new("48561834C67E65FFD2A9B47F41E5E78FDC95C387428FDB1E4B0188B64D1643C3A8D3455B945B7E8C4D166010C7C2CE23BFB9BEF43D0348FE7FA5284B0225E7FE1537546D114E3D8A4411B9B9351AB451E1A358F50ED61B1F00DA29336EEBBD649980AC86D76AF8BBB065298C2052672EEF3EF13AB47A15275FC2836F3AC74CEA", 16)
 
   DSA_SIGNATURE_DIGEST = OpenSSL::OPENSSL_VERSION_NUMBER > 0x10000000 ?
@@ -188,7 +205,7 @@ AQjjxMXhwULlmuR/K+WwlaZPiLIBYalLAZQ7ZbOPeVkJ8ePao0eLAgEC
     def setup
       @ca_key  = OpenSSL::TestUtils::TEST_KEY_RSA2048
       @svr_key = OpenSSL::TestUtils::TEST_KEY_RSA1024
-      @cli_key = OpenSSL::TestUtils::TEST_KEY_DSA256
+      @cli_key = OpenSSL::TestUtils::TEST_KEY_DSA1024
       @ca  = OpenSSL::X509::Name.parse("/DC=org/DC=ruby-lang/CN=CA")
       @svr = OpenSSL::X509::Name.parse("/DC=org/DC=ruby-lang/CN=localhost")
       @cli = OpenSSL::X509::Name.parse("/DC=org/DC=ruby-lang/CN=localhost")
@@ -290,6 +307,7 @@ AQjjxMXhwULlmuR/K+WwlaZPiLIBYalLAZQ7ZbOPeVkJ8ePao0eLAgEC
         ssls.start_immediately = start_immediately
 
         threads = []
+        Thread.abort_on_exception=true
         begin
           server = Thread.new do
             begin

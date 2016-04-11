@@ -137,7 +137,6 @@ static VALUE ossl_##keytype##_set_##name(VALUE self, VALUE bignum)	\
 		ossl_raise(eBNError, NULL);				\
 	if (!(set)) {							\
 		if (name) BN_clear_free(name);				\
-	    rb_bug("xx %d %d", !!b1, !!b2);\
 		ossl_raise(eBNError, "priv_key set failed");		\
 	}								\
 	BN_clear_free(old);						\
