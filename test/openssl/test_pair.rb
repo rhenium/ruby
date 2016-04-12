@@ -337,7 +337,7 @@ module OpenSSL::TestPairM
 
     ctx1 = OpenSSL::SSL::SSLContext.new
     ctx1.ciphers = "DH"
-    ctx2.security_level = 0
+    ctx1.security_level = 0
     ctx1.tmp_dh_callback = nil
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
     t = Thread.new { s1.connect }
@@ -384,6 +384,7 @@ module OpenSSL::TestPairM
     called = false
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "ECDH"
+    ctx2.security_level = 0
     ctx2.tmp_ecdh_callback = ->(*args) {
       called = true
       OpenSSL::PKey::EC.new "prime256v1"
@@ -394,6 +395,7 @@ module OpenSSL::TestPairM
     s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
     ctx1 = OpenSSL::SSL::SSLContext.new
     ctx1.ciphers = "ECDH"
+    ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
     th = Thread.new do
