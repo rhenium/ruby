@@ -123,14 +123,24 @@ static VALUE ossl_##keytype##_get_##name(VALUE self)			\
 static VALUE ossl_##keytype##_set_##name(VALUE self, VALUE bignum)	\
 {									\
 	EVP_PKEY *pkey;							\
-	BIGNUM *b1, *b2, *b3;						\
-	BIGNUM *old;							\
+	BIGNUM *b1 = NULL, *b2 = NULL, *b3 = NULL;			\
 	type *obj;							\
 									\
 	GetPKey(self, pkey);						\
 	obj = EVP_PKEY_get0_##type(pkey);				\
 	get; /* get current value */					\
-	old = name;							\
+	if (b1 && !(b1 = BN_dup(b1)))					\
+		ossl_raise(eBNError, NULL);				\
+	if (b2 && !(b2 = BN_dup(b2))) {					\
+		if (b1) BN_clear_free(b1);				\
+		ossl_raise(eBNError, NULL);				\
+	}								\
+	if (b3 && !(b3 = BN_dup(b3))) {					\
+		if (b1) BN_clear_free(b1);				\
+		if (b2) BN_clear_free(b2);				\
+		ossl_raise(eBNError, NULL);				\
+	}								\
+	if (name) BN_clear_free(name);					\
 	if (NIL_P(bignum))						\
 		name = NULL;						\
 	else if (!(name = BN_dup(GetBNPtr(bignum))))			\
@@ -139,7 +149,6 @@ static VALUE ossl_##keytype##_set_##name(VALUE self, VALUE bignum)	\
 		if (name) BN_clear_free(name);				\
 		ossl_raise(eBNError, "priv_key set failed");		\
 	}								\
-	BN_clear_free(old);						\
 	return bignum;							\
 }
 
