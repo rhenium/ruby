@@ -43,7 +43,7 @@ tddwpBAEDjcwMzA5NTYzMTU1MzAwpQMCARM=
       end
     }
   end
-
+=begin
   def test_session
     Timeout.timeout(5) do
       start_server(OpenSSL::SSL::VERIFY_NONE, true) do |server, port|
@@ -377,6 +377,7 @@ __EOS__
     assert(called[:get1])
     assert(called[:get2])
   end
+=end
 end
 
 end

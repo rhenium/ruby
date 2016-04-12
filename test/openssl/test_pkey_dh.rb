@@ -78,6 +78,8 @@ YoaOffgTf5qxiwkjnlVZQc3whgnEt9FpVMvQ9eknyeGB5KHfayAc3+hUAvI3/Cr3
   def test_key_exchange
     dh = OpenSSL::TestUtils::TEST_KEY_DH1024
     dh2 = dh.public_key
+    p dh.pub_key
+    p dh.priv_key
     dh.generate_key!
     dh2.generate_key!
     assert_equal(dh.compute_key(dh2.pub_key), dh2.compute_key(dh.pub_key))

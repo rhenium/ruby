@@ -71,7 +71,7 @@ ossl_generate_cb_stop(void *ptr)
 static void
 ossl_evp_pkey_free(void *ptr)
 {
-    EVP_PKEY_free(ptr);
+//    EVP_PKEY_free(ptr);
 }
 
 /*

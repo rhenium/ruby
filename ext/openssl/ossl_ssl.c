@@ -653,8 +653,7 @@ ssl_info_cb(const SSL *ssl, int where, int val)
 {
     int state = SSL_get_state(ssl);
 
-    if ((where & SSL_CB_HANDSHAKE_START) &&
-	(state & SSL_ST_ACCEPT)) {
+    if ((where & SSL_CB_HANDSHAKE_START) && (state & SSL_ST_ACCEPT)) {
 	ssl_renegotiation_cb(ssl);
     }
 }

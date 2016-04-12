@@ -687,6 +687,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx3 = OpenSSL::SSL::SSLContext.new
     ctx3.ciphers = "DH"
+    ctx3.security_level = 0
 
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "DH"
@@ -698,6 +699,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx1 = OpenSSL::SSL::SSLContext.new
     ctx1.ciphers = "DH"
+    ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
     s1.hostname = hostname
@@ -752,6 +754,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx3 = OpenSSL::SSL::SSLContext.new
     ctx3.ciphers = "DH"
+    ctx3.security_level = 0
     assert_not_predicate ctx3, :frozen?
 
     ctx2 = OpenSSL::SSL::SSLContext.new
@@ -764,6 +767,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx1 = OpenSSL::SSL::SSLContext.new
     ctx1.ciphers = "DH"
+    ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
     s1.hostname = hostname
@@ -785,6 +789,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "DH"
+    ctx2.security_level = 0
     ctx2.servername_cb = lambda { |args| nil }
 
     sock1, sock2 = socketpair
@@ -793,6 +798,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx1 = OpenSSL::SSL::SSLContext.new
     ctx1.ciphers = "DH"
+    ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
     s1.hostname = hostname
@@ -815,6 +821,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "DH"
+    ctx2.security_level = 0 # enable ADH
     ctx2.servername_cb = lambda do |args|
       cb_socket     = args[0]
       lambda_called = args[1]
@@ -827,6 +834,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx1 = OpenSSL::SSL::SSLContext.new
     ctx1.ciphers = "DH"
+    ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
     s1.hostname = hostname
