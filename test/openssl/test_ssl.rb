@@ -687,8 +687,6 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx3 = OpenSSL::SSL::SSLContext.new
     ctx3.ciphers = "DH"
-    ctx3.key = @svr_key
-    ctx3.cert = @svr_cert
 
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "DH"
@@ -722,8 +720,6 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "DH"
-    ctx2.key = @svr_key
-    ctx2.cert = @svr_cert
     ctx2.servername_cb = lambda { |args| Object.new }
 
     sock1, sock2 = socketpair
@@ -756,8 +752,6 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx3 = OpenSSL::SSL::SSLContext.new
     ctx3.ciphers = "DH"
-    ctx3.key = @svr_key
-    ctx3.cert = @svr_cert
     assert_not_predicate ctx3, :frozen?
 
     ctx2 = OpenSSL::SSL::SSLContext.new
@@ -791,8 +785,6 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
 
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "DH"
-    ctx2.key = @svr_key
-    ctx2.cert = @svr_cert
     ctx2.servername_cb = lambda { |args| nil }
 
     sock1, sock2 = socketpair
@@ -821,20 +813,21 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     cb_socket = nil
     hostname = 'example.org'
 
-    sock1, sock2 = socketpair
-
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "DH"
-    ctx2.key = @svr_key
-    ctx2.cert = @svr_cert
     ctx2.servername_cb = lambda do |args|
       cb_socket     = args[0]
       lambda_called = args[1]
       ctx2
     end
+
+    sock1, sock2 = socketpair
+
     s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
 
     ctx1 = OpenSSL::SSL::SSLContext.new
+    ctx1.ciphers = "DH"
+
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
     s1.hostname = hostname
     t = Thread.new { s1.connect }
@@ -843,9 +836,6 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     assert t.value
     assert_equal hostname, lambda_called
     assert_equal s2, cb_socket
-  rescue => e
-    p e
-    puts e.backtrace
   ensure
     s1.close if s1
     s2.close if s2
@@ -1227,7 +1217,10 @@ end
 
   def server_connect(port, ctx=nil)
     sock = TCPSocket.new("127.0.0.1", port)
-    ssl = ctx ? OpenSSL::SSL::SSLSocket.new(sock, ctx) : OpenSSL::SSL::SSLSocket.new(sock)
+    ctx ||= OpenSSL::SSL::SSLContext.new.tap { |ctx|
+      ctx.security_level = 0 if ctx.respond_to?(:security_level)
+    }
+    ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
     ssl.sync_close = true
     ssl.connect
     yield ssl if block_given?
