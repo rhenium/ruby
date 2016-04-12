@@ -895,7 +895,6 @@ static VALUE
 ossl_sslctx_get_ciphers(VALUE self)
 {
     SSL_CTX *ctx;
-    SSL *temp_ssl;
     STACK_OF(SSL_CIPHER) *ciphers;
     const SSL_CIPHER *cipher;
     VALUE ary;
@@ -906,14 +905,8 @@ ossl_sslctx_get_ciphers(VALUE self)
         rb_warning("SSL_CTX is not initialized.");
         return Qnil;
     }
-    /* SSL_CTX was made opaque so we can't access ctx->cipher_list directly :( */
-    temp_ssl = SSL_new(ctx);
-    if (!temp_ssl)
-	ossl_raise(eSSLError, "SSL_new() failed");
 
-    ciphers = SSL_get_ciphers(temp_ssl);
-    SSL_free(temp_ssl);
-
+    ciphers = SSL_CTX_get_ciphers(ctx);
     if (!ciphers)
         return rb_ary_new();
 
