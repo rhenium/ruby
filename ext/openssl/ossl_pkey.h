@@ -114,7 +114,10 @@ static VALUE ossl_##keytype##_get_##name(VALUE self)			\
 	GetPKey(self, pkey);						\
 	obj = EVP_PKEY_get0_##type(pkey);				\
 	get;								\
-	return ossl_bn_new(name);					\
+	if (name)							\
+		return ossl_bn_new(name);				\
+	else								\
+		return Qnil;						\
 }									\
 /*									\
  *  call-seq:								\
