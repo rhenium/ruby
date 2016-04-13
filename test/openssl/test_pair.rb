@@ -381,6 +381,9 @@ module OpenSSL::TestPairM
   end
 
   def test_ecdh_callback
+    if OpenSSL::OPENSSL_VERSION_NUMBER >= 0x10100000
+      skip "OpenSSL 1.1.0 removed SSL_CTX_set_tmp_ecdh_callback()"
+    end
     called = false
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "ECDH"
