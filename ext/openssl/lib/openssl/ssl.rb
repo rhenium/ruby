@@ -75,9 +75,8 @@ module OpenSSL
         "verify_callback", "cert_store", "extra_chain_cert",
         "client_cert_cb", "session_id_context", "tmp_dh_callback",
         "session_get_cb", "session_new_cb", "session_remove_cb",
-        "tmp_ecdh_callback", "servername_cb", "npn_protocols",
-        "alpn_protocols", "alpn_select_cb",
-        "npn_select_cb"].map { |x| "@#{x}" }
+        "servername_cb", "npn_protocols", "alpn_protocols",
+        "alpn_select_cb", "npn_select_cb"].map { |x| "@#{x}" }
 
       # A callback invoked when DH parameters are required.
       #
@@ -337,10 +336,6 @@ module OpenSSL
 
       def tmp_dh_callback
         @context.tmp_dh_callback || OpenSSL::PKey::DEFAULT_TMP_DH_CALLBACK
-      end
-
-      def tmp_ecdh_callback
-        @context.tmp_ecdh_callback
       end
 
       def session_new_cb

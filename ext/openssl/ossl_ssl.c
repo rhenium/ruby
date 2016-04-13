@@ -62,7 +62,6 @@ static VALUE eSSLErrorWaitWritable;
 #define ossl_sslctx_get_cert_store(o)    	rb_iv_get((o),"@cert_store")
 #define ossl_sslctx_get_extra_cert(o)    	rb_iv_get((o),"@extra_chain_cert")
 #define ossl_sslctx_get_client_cert_cb(o) 	rb_iv_get((o),"@client_cert_cb")
-#define ossl_sslctx_get_tmp_ecdh_cb(o)          rb_iv_get((o),"@tmp_ecdh_callback")
 #define ossl_sslctx_get_sess_id_ctx(o)   	rb_iv_get((o),"@session_id_context")
 
 #define ossl_ssl_get_io(o)           rb_iv_get((o),"@io")
@@ -73,7 +72,6 @@ static VALUE eSSLErrorWaitWritable;
 #define ossl_ssl_set_x509(o,v)       rb_iv_set((o),"@x509",(v))
 #define ossl_ssl_set_key(o,v)        rb_iv_set((o),"@key",(v))
 #define ossl_ssl_set_tmp_dh(o,v)     rb_iv_set((o),"@tmp_dh",(v))
-#define ossl_ssl_set_tmp_ecdh(o,v)   rb_iv_set((o),"@tmp_ecdh",(v))
 
 static ID ID_callback_state;
 
@@ -126,6 +124,7 @@ static const struct {
 static int ossl_ssl_ex_vcb_idx;
 static int ossl_ssl_ex_store_p;
 static int ossl_ssl_ex_ptr_idx;
+static int ossl_ssl_ex_ec_nid_idx;
 
 static void
 ossl_sslctx_free(void *ptr)
@@ -270,40 +269,6 @@ ossl_tmp_dh_callback(SSL *ssl, int is_export, int keylength)
     return EVP_PKEY_get0_DH(GetPKeyPtr(dh));
 }
 #endif /* OPENSSL_NO_DH */
-
-#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
-static VALUE
-ossl_call_tmp_ecdh_callback(VALUE args)
-{
-    VALUE cb, ecdh;
-    EVP_PKEY *pkey;
-
-    cb = rb_funcall(rb_ary_entry(args, 0), rb_intern("tmp_ecdh_callback"), 0);
-
-    if (NIL_P(cb)) return Qfalse;
-    ecdh = rb_apply(cb, rb_intern("call"), args);
-    pkey = GetPKeyPtr(ecdh);
-    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_EC) return Qfalse;
-
-    return ecdh;
-}
-
-static EC_KEY*
-ossl_tmp_ecdh_callback(SSL *ssl, int is_export, int keylength)
-{
-    VALUE args, ecdh, rb_ssl;
-
-    rb_ssl = (VALUE)SSL_get_ex_data(ssl, ossl_ssl_ex_ptr_idx);
-
-    args = rb_ary_new_from_args(3, rb_ssl, INT2FIX(is_export), INT2FIX(keylength));
-
-    ecdh = rb_protect(ossl_call_tmp_ecdh_callback, args, NULL);
-    if (!RTEST(ecdh)) return NULL;
-    ossl_ssl_set_tmp_ecdh(rb_ssl, ecdh);
-
-    return EVP_PKEY_get0_EC_KEY(GetPKeyPtr(ecdh));
-}
-#endif
 
 static int
 ossl_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
@@ -1010,6 +975,56 @@ ossl_sslctx_set_security_level(VALUE self, VALUE v)
 
     return v;
 }
+
+#ifndef OPENSSL_NO_EC
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
+static EC_KEY *
+ossl_tmp_ecdh_callback(SSL *ssl, int is_export, int keylength)
+{
+    int nid = (int)SSL_CTX_get_ex_data(SSL_get_SSL_CTX(ssl), ossl_ssl_ex_ec_nid_idx);
+    if (nid)
+        return EC_KEY_new_by_curve_name(nid);
+    else
+	return NULL;
+}
+#endif
+
+/*
+ * call-seq:
+ *    ctx.set_elliptic_curves("curve1:curve2:curve3") -> self
+ *
+ * Sets the list of supported elliptic curves for this context. The curves are
+ * passed as a string, colon separated list of curve NIDs in NIST curve names.
+ * For example "P-521:P-384:P-256".
+ */
+static VALUE
+ossl_sslctx_set_elliptic_curves(VALUE self, VALUE str)
+{
+    SSL_CTX *ctx;
+    const char *cstr = StringValueCStr(str);
+
+    rb_check_frozen(self);
+    GetSSLCTX(self, ctx);
+    if (!ctx)
+	ossl_raise(eSSLError, "SSL_CTX is not initialized.");
+
+#if defined(HAVE_SSL_CTX_SET1_CURVES_LIST) /* OpenSSL 1.0.2- */
+    if (!SSL_CTX_set1_curves_list(ctx, cstr))
+	ossl_raise(eSSLError, "SSL_CTX_set1_curves_list");
+#else
+    if (strstr(cstr, ":"))
+	ossl_raise(eSSLError, "only one curve can be specified");
+    {
+	int nid = EC_curve_nist2nid(cstr);
+	if (nid == NID_undef)
+	    ossl_raise(eSSLError, "unknown curve name");
+	SSL_CTX_set_ex_data(ctx, ossl_ssl_ex_ec_nid_idx, (void *)(VALUE)nid);
+    }
+#endif
+
+    return self;
+}
+#endif
 
 /*
  *  call-seq:
@@ -2005,6 +2020,7 @@ Init_ossl_ssl(void)
     ossl_ssl_ex_vcb_idx = SSL_get_ex_new_index(0,(void *)"ossl_ssl_ex_vcb_idx",0,0,0);
     ossl_ssl_ex_store_p = SSL_get_ex_new_index(0,(void *)"ossl_ssl_ex_store_p",0,0,0);
     ossl_ssl_ex_ptr_idx = SSL_get_ex_new_index(0,(void *)"ossl_ssl_ex_ptr_idx",0,0,0);
+    ossl_ssl_ex_ec_nid_idx = SSL_get_ex_new_index(0,(void *)"ossl_ssl_ex_ec_nid_idx",0,0,0);
 
     /* Document-module: OpenSSL::SSL
      *
@@ -2132,18 +2148,6 @@ Init_ossl_ssl(void)
      * other value is returned the handshake is suspended.
      */
     rb_attr(cSSLContext, rb_intern("client_cert_cb"), 1, 1, Qfalse);
-
-    /*
-     * A callback invoked when ECDH parameters are required.
-     *
-     * The callback is invoked with the Session for the key exchange, an
-     * flag indicating the use of an export cipher and the keylength
-     * required.
-     *
-     * The callback must return an OpenSSL::PKey::EC instance of the correct
-     * key length.
-     */
-    rb_attr(cSSLContext, rb_intern("tmp_ecdh_callback"), 1, 1, Qfalse);
 
     /*
      * Sets the context in which a session can be reused.  This allows
@@ -2281,6 +2285,7 @@ Init_ossl_ssl(void)
     rb_define_method(cSSLContext, "ciphers=",    ossl_sslctx_set_ciphers, 1);
     rb_define_method(cSSLContext, "security_level", ossl_sslctx_get_security_level, 0);
     rb_define_method(cSSLContext, "security_level=", ossl_sslctx_set_security_level, 1);
+    rb_define_method(cSSLContext, "set_elliptic_curves", ossl_sslctx_set_elliptic_curves, 1);
 
     rb_define_method(cSSLContext, "setup", ossl_sslctx_setup, 0);
 

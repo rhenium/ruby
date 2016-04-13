@@ -210,6 +210,10 @@ ASN1_INTEGER *X509_REVOKED_get0_serialNumber(X509_REVOKED *x);
 int X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial);
 #endif
 
+#if !defined(HAVE_EC_CURVE_NIST2NID) /* new in 1.0.2 */
+int EC_curve_nist2nid(const char *str);
+#endif
+
 /*** new in 1.1.0 ***/
 /* OCSP */
 #if defined(HAVE_OPENSSL_OCSP_H)

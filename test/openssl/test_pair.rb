@@ -380,24 +380,17 @@ module OpenSSL::TestPairM
     accepted.close if accepted.respond_to?(:close)
   end
 
-  def test_ecdh_callback
-    if OpenSSL::OPENSSL_VERSION_NUMBER >= 0x10100000
-      skip "OpenSSL 1.1.0 removed SSL_CTX_set_tmp_ecdh_callback()"
-    end
-    called = false
+  def test_set_elliptic_curves
     ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "ECDH"
+    ctx2.ciphers = "ECDH:DH"
     ctx2.security_level = 0
-    ctx2.tmp_ecdh_callback = ->(*args) {
-      called = true
-      OpenSSL::PKey::EC.new "prime256v1"
-    }
+    ctx2.set_elliptic_curves("P-384")
 
     sock1, sock2 = tcp_pair
 
     s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
     ctx1 = OpenSSL::SSL::SSLContext.new
-    ctx1.ciphers = "ECDH"
+    ctx1.ciphers = "ECDH:DH"
     ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
@@ -415,7 +408,8 @@ module OpenSSL::TestPairM
 
     accepted = s2.accept
 
-    assert called, 'ecdh callback should be called'
+    assert accepted.cipher[0].start_with?("AECDH"), "AECDH should be used"
+    # TODO: how to detect what curve was used?
   rescue OpenSSL::SSL::SSLError => e
     if e.message =~ /no cipher match/
       skip "ECDH cipher not supported."
