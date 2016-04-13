@@ -3,21 +3,20 @@ require_relative 'utils'
 
 class OpenSSL::TestEngine < Test::Unit::TestCase
 
-  def teardown
-    OpenSSL::Engine.cleanup # [ruby-core:40669]
-    assert_equal(0, OpenSSL::Engine.engines.size)
-  end
-
   def test_engines_free # [ruby-dev:44173]
-    OpenSSL::Engine.load("openssl")
-    OpenSSL::Engine.engines
-    OpenSSL::Engine.engines
+    assert_separately(["-ropenssl"], <<-'end;')
+      OpenSSL::Engine.load("openssl")
+      OpenSSL::Engine.engines
+      OpenSSL::Engine.engines
+    end;
   end
 
   def test_openssl_engine_builtin
-    engine = OpenSSL::Engine.load("openssl")
-    assert_equal(true, engine)
-    assert_equal(1, OpenSSL::Engine.engines.size)
+    assert_separately(["-ropenssl"], <<-'end;')
+      engine = OpenSSL::Engine.load("openssl")
+      assert_equal(true, engine)
+      assert_equal(1, OpenSSL::Engine.engines.size)
+    end;
   end
 
   def test_openssl_engine_by_id_string

@@ -50,14 +50,6 @@ VALUE eEngineError;
 /*
  * Private
  */
-#define OSSL_ENGINE_LOAD_IF_MATCH(x) \
-do{\
-  if(!strcmp(#x, RSTRING_PTR(name))){\
-    ENGINE_load_##x();\
-    return Qtrue;\
-  }\
-}while(0)
-
 static void
 ossl_engine_free(void *engine)
 {
@@ -97,7 +89,17 @@ ossl_engine_s_load(int argc, VALUE *argv, VALUE klass)
         return Qtrue;
     }
     StringValue(name);
+
 #ifndef OPENSSL_NO_STATIC_ENGINE
+
+/* use old (-1.0.2) ENGINE_load_*() for now */
+#define OSSL_ENGINE_LOAD_IF_MATCH(x) do {\
+  if (!strcmp(#x, RSTRING_PTR(name))) {\
+    ENGINE_load_##x();\
+    return Qtrue;\
+  }\
+} while(0)
+
 #if HAVE_ENGINE_LOAD_DYNAMIC
     OSSL_ENGINE_LOAD_IF_MATCH(dynamic);
 #endif
@@ -151,24 +153,6 @@ ossl_engine_s_load(int argc, VALUE *argv, VALUE klass)
     rb_warning("no such builtin loader for `%s'", RSTRING_PTR(name));
     return Qnil;
 #endif /* HAVE_ENGINE_LOAD_BUILTIN_ENGINES */
-}
-
-/* Document-method: OpenSSL::Engine.cleanup
- * call-seq:
- *  OpenSSL::Engine.cleanup
- *
- * It is only necessary to run cleanup when engines are loaded via
- * OpenSSL::Engine.load. However, running cleanup before exit is recommended.
- *
- * See also, https://www.openssl.org/docs/crypto/engine.html
- */
-static VALUE
-ossl_engine_s_cleanup(VALUE self)
-{
-#if defined(HAVE_ENGINE_CLEANUP)
-    ENGINE_cleanup();
-#endif
-    return Qnil;
 }
 
 /* Document-method: OpenSSL::Engine.engines
@@ -558,7 +542,6 @@ Init_ossl_engine(void)
 
     rb_define_alloc_func(cEngine, ossl_engine_s_alloc);
     rb_define_singleton_method(cEngine, "load", ossl_engine_s_load, -1);
-    rb_define_singleton_method(cEngine, "cleanup", ossl_engine_s_cleanup, 0);
     rb_define_singleton_method(cEngine, "engines", ossl_engine_s_engines, 0);
     rb_define_singleton_method(cEngine, "by_id", ossl_engine_s_by_id, 1);
     rb_undef_method(CLASS_OF(cEngine), "new");
