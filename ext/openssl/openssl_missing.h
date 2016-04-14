@@ -263,36 +263,39 @@ int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b);
 #endif
 
 #if defined(HAVE_EVP_PKEY_TYPE) /* is not opaque */
-#  define EVP_PKEY_get0_RSA(p) (p->pkey.rsa)
-#  define EVP_PKEY_get0_DSA(p) (p->pkey.dsa)
-#  define EVP_PKEY_get0_EC_KEY(p) (p->pkey.ec)
-#  define EVP_PKEY_get0_DH(p) (p->pkey.dh)
+static inline RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey) { return pkey->pkey.rsa; }
+static inline DSA *EVP_PKEY_get0_DSA(EVP_PKEY *pkey) { return pkey->pkey.dsa; }
+static inline EC_KEY *EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey) { return pkey->pkey.ec; }
+static inline DH *EVP_PKEY_get0_DH(EVP_PKEY *pkey) { return pkey->pkey.dh; }
 
-#  define RSA_get0_engine(p) (p->engine)
-#  define RSA_get0_key(p, pn, pe, pd) do {	\
-	if (pn) *pn = p->n;			\
-	if (pe) *pe = p->e;			\
-	if (pd) *pd = p->d; }
-#  define RSA_get0_factors(p, pp, pq) do {	\
-	if (pp) *pp = p->p;			\
-	if (pq) *pq = p->q; }
-#  define RSA_get0_crt_params(p, pdmp1, pdmq1, piqmp) do {\
-	if (pdmp1) *pdmp1 = p->dmp1;		\
-	if (pdmq1) *pdmq1 = p->dmq1;		\
-	if (piqmp) *piqmp = p->iqmp; }
+static inline void RSA_get0_key(RSA *rsa, BIGNUM **pn, BIGNUM **pe, BIGNUM **pd) {
+	if (pn) *pn = rsa->n;
+	if (pe) *pe = rsa->e;
+	if (pd) *pd = rsa->d; }
+static inline void RSA_get0_factors(RSA *rsa, BIGNUM **pp, BIGNUM **pq) {
+	if (pp) *pp = rsa->p;
+	if (pq) *pq = rsa->q; }
+static inline void RSA_get0_crt_params(RSA *rsa, BIGNUM **pdmp1, BIGNUM **pdmq1, BIGNUM **piqmp) {
+	if (pdmp1) *pdmp1 = rsa->dmp1;
+	if (pdmq1) *pdmq1 = rsa->dmq1;
+	if (piqmp) *piqmp = rsa->iqmp; }
 
-#  define DSA_get0_engine(p) (p->engine)
-#  define DSA_get0_key(p, ppub, ppriv) do {	\
-	if (ppub) *ppub = p->pub_key;		\
-	if (ppriv) *ppriv = p->priv_key; }
-#  define DSA_get0_pqg(p, pp, pq, pg) do {	\
-	if (pp) *pp = p->p;			\
-	if (pq) *pq = p->q;			\
-	if (pg) *pg = p->g; }
+static inline void DSA_get0_key(DSA *dsa, BIGNUM **ppub_key, BIGNUM **ppriv_key) {
+	if (ppub_key) *ppub_key = dsa->pub_key;
+	if (ppriv_key) *ppriv_key = dsa->priv_key; }
+static inline void DSA_get0_pqg(DSA *dsa, BIGNUM **pp, BIGNUM **pq, BIGNUM **pg) {
+	if (pp) *pp = dsa->p;
+	if (pq) *pq = dsa->q;
+	if (pg) *pg = dsa->g; }
 
-#  define DH_get0_engine(p) (p->engine)
-#  define DH_get0_key(p, ppub, ppriv) DSA_get0_key(p, ppub, ppriv)
-#  define DH_get0_pqg(p, pp, pq, pg) DSA_get0_pqg(p, pp, pq, pg)
+static inline ENGINE *DH_get0_engine(DH *dh) { return dh->engine; }
+static inline void DH_get0_key(DH *dh, BIGNUM **ppub_key, BIGNUM **ppriv_key) {
+	if (ppub_key) *ppub_key = dh->pub_key;
+	if (ppriv_key) *ppriv_key = dh->priv_key; }
+static inline void DH_get0_pqg(DH *dh, BIGNUM **pp, BIGNUM **pq, BIGNUM **pg) {
+	if (pp) *pp = dh->p;
+	if (pq) *pq = dh->q;
+	if (pg) *pg = dh->g; }
 #endif
 
 /* HMAC */

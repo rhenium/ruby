@@ -90,8 +90,6 @@ ossl_engine_s_load(int argc, VALUE *argv, VALUE klass)
     }
     StringValue(name);
 
-#ifndef OPENSSL_NO_STATIC_ENGINE
-
 /* use old (-1.0.2) ENGINE_load_*() for now */
 #define OSSL_ENGINE_LOAD_IF_MATCH(x) do {\
   if (!strcmp(#x, RSTRING_PTR(name))) {\
@@ -100,6 +98,7 @@ ossl_engine_s_load(int argc, VALUE *argv, VALUE klass)
   }\
 } while(0)
 
+#ifndef OPENSSL_NO_STATIC_ENGINE
 #if HAVE_ENGINE_LOAD_DYNAMIC
     OSSL_ENGINE_LOAD_IF_MATCH(dynamic);
 #endif
