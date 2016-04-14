@@ -959,7 +959,11 @@ ossl_sslctx_get_security_level(VALUE self)
 	return Qnil;
     }
 
+#if defined(HAVE_SSL_CTX_GET_SECURITY_LEVEL)
     i = SSL_CTX_get_security_level(ctx);
+#else
+    i = 0;
+#endif
     return INT2FIX(i);
 }
 
@@ -981,7 +985,9 @@ ossl_sslctx_set_security_level(VALUE self, VALUE v)
     if (!ctx)
 	ossl_raise(eSSLError, "SSL_CTX is not initialized.");
 
+#if defined(HAVE_SSL_CTX_GET_SECURITY_LEVEL)
     SSL_CTX_set_security_level(ctx, NUM2INT(v));
+#endif
 
     return v;
 }

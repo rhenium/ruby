@@ -140,6 +140,7 @@ have_func("SSL_CTX_set_alpn_select_cb")
 have_func("SSL_CTX_set_next_proto_select_cb")
 have_func("SSL_CTX_set_tmp_ecdh_callback")
 have_func("SSL_CTX_get_ciphers")
+have_func("SSL_CTX_get_security_level") # 1.1.0
 have_func_or_macro("SSL_CTX_set1_curves_list", "openssl/ssl.h")
 have_macro("SSL_get_server_tmp_key", ['openssl/ssl.h']) && $defs.push("-DHAVE_SSL_GET_SERVER_TMP_KEY")
 unless have_func("SSL_set_tlsext_host_name", ['openssl/ssl.h'])
