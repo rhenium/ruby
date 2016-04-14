@@ -243,6 +243,10 @@ int SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
 int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b);
 #endif
 
+#if !defined(HAVE_SSL_CTX_GET_CIPHERS)
+static inline STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(SSL_CTX *ctx) { return ctx->cipher_list; }
+#endif
+
 /* reference counter */
 #if !defined(HAVE_X509_UP_REF)
 #  define X509_up_ref(x) \
