@@ -270,6 +270,18 @@ ossl_tmp_dh_callback(SSL *ssl, int is_export, int keylength)
 }
 #endif /* OPENSSL_NO_DH */
 
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
+static EC_KEY *
+ossl_tmp_ecdh_callback(SSL *ssl, int is_export, int keylength)
+{
+    int nid = (int)(VALUE)SSL_CTX_get_ex_data(SSL_get_SSL_CTX(ssl), ossl_ssl_ex_ec_nid_idx);
+    if (nid)
+        return EC_KEY_new_by_curve_name(nid);
+    else
+	return NULL;
+}
+#endif /* HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK */
+
 static int
 ossl_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
@@ -685,9 +697,7 @@ ossl_sslctx_setup(VALUE self)
 #endif
 
 #if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
-    if (RTEST(ossl_sslctx_get_tmp_ecdh_cb(self))){
-	SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
-    }
+    SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
 #endif
 
     val = ossl_sslctx_get_cert_store(self);
@@ -977,18 +987,6 @@ ossl_sslctx_set_security_level(VALUE self, VALUE v)
 }
 
 #ifndef OPENSSL_NO_EC
-#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
-static EC_KEY *
-ossl_tmp_ecdh_callback(SSL *ssl, int is_export, int keylength)
-{
-    int nid = (int)SSL_CTX_get_ex_data(SSL_get_SSL_CTX(ssl), ossl_ssl_ex_ec_nid_idx);
-    if (nid)
-        return EC_KEY_new_by_curve_name(nid);
-    else
-	return NULL;
-}
-#endif
-
 /*
  * call-seq:
  *    ctx.set_elliptic_curves("curve1:curve2:curve3") -> self
