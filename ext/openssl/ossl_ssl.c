@@ -812,7 +812,7 @@ ossl_sslctx_setup(VALUE self)
     val = rb_iv_get(self, "@alpn_protocols");
     if (!NIL_P(val)) {
 	VALUE rprotos = ssl_encode_npn_protocols(val);
-	SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)StringValueCStr(rprotos), RSTRING_LENINT(rprotos));
+	SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)RSTRING_PTR(rprotos), RSTRING_LENINT(rprotos));
 	OSSL_Debug("SSL ALPN values added");
     }
     if (RTEST(rb_iv_get(self, "@alpn_select_cb"))) {
@@ -947,7 +947,7 @@ ossl_sslctx_set_ciphers(VALUE self, VALUE v)
         ossl_raise(eSSLError, "SSL_CTX is not initialized.");
         return Qnil;
     }
-    if (!SSL_CTX_set_cipher_list(ctx, RSTRING_PTR(str))) {
+    if (!SSL_CTX_set_cipher_list(ctx, StringValueCStr(str))) {
         ossl_raise(eSSLError, "SSL_CTX_set_cipher_list");
     }
 
@@ -1147,7 +1147,7 @@ ossl_sslctx_flush_sessions(int argc, VALUE *argv, VALUE self)
 static void
 ossl_ssl_shutdown(SSL *ssl)
 {
-    int i, rc;
+    int i;
 
     if (ssl) {
 	/* 4 is from SSL_smart_shutdown() of mod_ssl.c (v2.2.19) */
@@ -1157,10 +1157,9 @@ ossl_ssl_shutdown(SSL *ssl)
 	     * Ignore the case SSL_shutdown returns -1. Empty handshake_func
 	     * must not happen.
 	     */
-	    if ((rc = SSL_shutdown(ssl)) != 0)
+	    if (SSL_shutdown(ssl) != 0)
 		break;
 	}
-	SSL_clear(ssl);
 	ossl_clear_error();
     }
 }
@@ -1271,7 +1270,7 @@ no_exception_p(VALUE opts)
 }
 
 static VALUE
-ossl_start_ssl(VALUE self, int (*func)(), const char *funcname, VALUE opts)
+ossl_start_ssl(VALUE self, int (*func)(SSL *), const char *funcname, VALUE opts)
 {
     SSL *ssl;
     rb_io_t *fptr;
