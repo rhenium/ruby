@@ -1598,7 +1598,8 @@ ossl_ssl_write_nonblock(int argc, VALUE *argv, VALUE self)
  * call-seq:
  *    ssl.stop => nil
  *
- * Stops the SSL connection and prepares it for another connection.
+ * Sends "close notify" to the peer and tries to shut down the SSL connection
+ * gracefully.
  */
 static VALUE
 ossl_ssl_stop(VALUE self)
@@ -1607,14 +1608,12 @@ ossl_ssl_stop(VALUE self)
 
     /* ossl_ssl_data_get_struct() is not usable here because it may return
      * from this function; */
-
     GetSSL(self, ssl);
 
     if (ssl) {
+	/* the SSL object will be freed by GC */
 	ossl_ssl_shutdown(ssl);
-	SSL_free(ssl);
     }
-    DATA_PTR(self) = NULL;
 
     return Qnil;
 }
