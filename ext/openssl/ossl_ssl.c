@@ -1284,7 +1284,9 @@ ossl_start_ssl(VALUE self, int (*func)(), const char *funcname, VALUE opts)
     ossl_ssl_data_get_struct(self, ssl);
 
     GetOpenFile(ossl_ssl_get_io(self), fptr);
-    for(;;){
+    for (;;) {
+	if (RTYPEDDATA_DATA(self) != ssl)
+	    ossl_raise(eSSLError, "connection is shut down");
 	ret = func(ssl);
 
         cb_state = rb_ivar_get(self, ID_callback_state);
@@ -1441,7 +1443,9 @@ ossl_ssl_read_internal(int argc, VALUE *argv, VALUE self, int nonblock)
     if (ssl) {
 	if(!nonblock && SSL_pending(ssl) <= 0)
 	    rb_thread_wait_fd(FPTR_TO_FD(fptr));
-	for (;;){
+	for (;;) {
+	    if (RTYPEDDATA_DATA(self) != ssl)
+		ossl_raise(eSSLError, "connection is shut down");
 	    nread = SSL_read(ssl, RSTRING_PTR(str), RSTRING_LENINT(str));
 	    switch(ssl_get_error(ssl, nread)){
 	    case SSL_ERROR_NONE:
@@ -1533,7 +1537,9 @@ ossl_ssl_write_internal(VALUE self, VALUE str, VALUE opts)
     GetOpenFile(ossl_ssl_get_io(self), fptr);
 
     if (ssl) {
-	for (;;){
+	for (;;) {
+	    if (RTYPEDDATA_DATA(self) != ssl)
+		ossl_raise(eSSLError, "connection is shut down");
 	    nwrite = SSL_write(ssl, RSTRING_PTR(str), RSTRING_LENINT(str));
 	    switch(ssl_get_error(ssl, nwrite)){
 	    case SSL_ERROR_NONE:
