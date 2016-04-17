@@ -248,7 +248,7 @@ ossl_call_tmp_dh_callback(VALUE args)
     if (NIL_P(cb)) return Qfalse;
     dh = rb_apply(cb, rb_intern("call"), args);
     pkey = GetPKeyPtr(dh);
-    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_DH) return Qfalse;
+    if (EVP_PKEY_base_id(pkey) != EVP_PKEY_DH) return Qfalse;
 
     return dh;
 }

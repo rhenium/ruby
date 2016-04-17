@@ -129,7 +129,7 @@ have_func("OCSP_SINGLERESP_delete_ext")
 # added in 1.0.0
 have_struct_member("CRYPTO_THREADID", "ptr", "openssl/crypto.h") # check if CRYPTO_THREADID exists
 have_func("EVP_CIPHER_CTX_copy")
-have_func("EVP_PKEY_id")
+have_func("EVP_PKEY_base_id")
 have_func("HMAC_CTX_copy")
 have_func("PKCS5_PBKDF2_HMAC")
 have_func("X509_NAME_hash_old")

@@ -25,7 +25,7 @@ static const rb_data_type_t ossl_ec_point_type;
 
 #define GetPKeyEC(obj, pkey) do { \
     GetPKey((obj), (pkey)); \
-    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_EC) { \
+    if (EVP_PKEY_base_id(pkey) != EVP_PKEY_EC) { \
 	ossl_raise(rb_eRuntimeError, "THIS IS NOT A EC PKEY!"); \
     } \
 } while (0)
@@ -137,7 +137,7 @@ VALUE ossl_ec_new(EVP_PKEY *pkey)
 	obj = ec_instance(cEC, EC_KEY_new());
     } else {
 	obj = NewPKey(cEC);
-	if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_EC) {
+	if (EVP_PKEY_base_id(pkey) != EVP_PKEY_EC) {
 	    ossl_raise(rb_eTypeError, "Not a EC key!");
 	}
 	SetPKey(obj, pkey);

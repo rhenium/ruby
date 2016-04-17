@@ -13,7 +13,7 @@
 
 #define GetPKeyRSA(obj, pkey) do { \
     GetPKey((obj), (pkey)); \
-    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_RSA) { /* PARANOIA? */ \
+    if (EVP_PKEY_base_id(pkey) != EVP_PKEY_RSA) { /* PARANOIA? */ \
 	ossl_raise(rb_eRuntimeError, "THIS IS NOT A RSA!") ; \
     } \
 } while (0)
@@ -68,7 +68,7 @@ ossl_rsa_new(EVP_PKEY *pkey)
     }
     else {
 	obj = NewPKey(cRSA);
-	if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_RSA) {
+	if (EVP_PKEY_base_id(pkey) != EVP_PKEY_RSA) {
 	    ossl_raise(rb_eTypeError, "Not a RSA key!");
 	}
 	SetPKey(obj, pkey);

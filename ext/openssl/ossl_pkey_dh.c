@@ -13,7 +13,7 @@
 
 #define GetPKeyDH(obj, pkey) do { \
     GetPKey((obj), (pkey)); \
-    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_DH) { /* PARANOIA? */ \
+    if (EVP_PKEY_base_id(pkey) != EVP_PKEY_DH) { /* PARANOIA? */ \
 	ossl_raise(rb_eRuntimeError, "THIS IS NOT A DH!") ; \
     } \
 } while (0)
@@ -58,7 +58,7 @@ ossl_dh_new(EVP_PKEY *pkey)
 	obj = dh_instance(cDH, DH_new());
     } else {
 	obj = NewPKey(cDH);
-	if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_DH) {
+	if (EVP_PKEY_base_id(pkey) != EVP_PKEY_DH) {
 	    ossl_raise(rb_eTypeError, "Not a DH key!");
 	}
 	SetPKey(obj, pkey);

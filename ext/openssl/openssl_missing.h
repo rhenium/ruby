@@ -255,8 +255,8 @@ int SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
 int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in);
 #endif
 
-#if !defined(HAVE_EVP_PKEY_id)
-#  define EVP_PKEY_id(pkey) ((pkey)->type)
+#if !defined(HAVE_EVP_PKEY_BASE_ID)
+#  define EVP_PKEY_base_id(pkey) EVP_PKEY_type((pkey)->type)
 #endif
 
 #if !defined(HAVE_HMAC_CTX_COPY)

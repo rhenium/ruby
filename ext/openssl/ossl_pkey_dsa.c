@@ -13,7 +13,7 @@
 
 #define GetPKeyDSA(obj, pkey) do { \
     GetPKey((obj), (pkey)); \
-    if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_DSA) { /* PARANOIA? */ \
+    if (EVP_PKEY_base_id(pkey) != EVP_PKEY_DSA) { /* PARANOIA? */ \
 	ossl_raise(rb_eRuntimeError, "THIS IS NOT A DSA!"); \
     } \
 } while (0)
@@ -66,7 +66,7 @@ ossl_dsa_new(EVP_PKEY *pkey)
 	obj = dsa_instance(cDSA, DSA_new());
     } else {
 	obj = NewPKey(cDSA);
-	if (EVP_PKEY_type(EVP_PKEY_id(pkey)) != EVP_PKEY_DSA) {
+	if (EVP_PKEY_base_id(pkey) != EVP_PKEY_DSA) {
 	    ossl_raise(rb_eTypeError, "Not a DSA key!");
 	}
 	SetPKey(obj, pkey);
