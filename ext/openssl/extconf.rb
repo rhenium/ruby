@@ -98,8 +98,7 @@ have_func("X509_CRL_add0_revoked")
 have_func("X509_CRL_set_issuer_name")
 have_func("X509_CRL_set_version")
 have_func("X509_CRL_sort")
-have_func("X509_STORE_get_ex_data")
-have_func("X509_STORE_set_ex_data")
+have_func("X509_REVOKED_set_serialNumber")
 have_func("X509V3_set_nconf")
 have_func("X509V3_EXT_nconf_nid")
 
@@ -162,7 +161,6 @@ have_func("X509_CRL_get0_signature")
 have_func("X509_REQ_get0_signature")
 have_func("X509_get0_tbs_sigalg")
 have_func("X509_REVOKED_get0_serialNumber")
-have_func("X509_REVOKED_set_serialNumber")
 have_func("X509_REVOKED_get0_revocationDate")
 have_func("TLS_method") # renamed from SSLv23_method
 have_func("SSL_CTX_get_ciphers")
@@ -179,6 +177,10 @@ have_macro("OPENSSL_FIPS", ['openssl/opensslconf.h']) && $defs.push("-DHAVE_OPEN
 
 # LibreSSL support
 have_func("RAND_egd") # removed
+
+# doesn't exist on any version of OpenSSL
+have_func("X509_STORE_get_ex_data")
+have_func("X509_STORE_set_ex_data")
 
 Logging::message "=== Checking done. ===\n"
 
