@@ -73,6 +73,29 @@ static VALUE ossl_ssl_session_initialize(VALUE self, VALUE arg1)
 	return self;
 }
 
+
+static int
+xSSL_SESSION_cmp(const SSL_SESSION *a, const SSL_SESSION *b)
+{
+    unsigned int a_len;
+    const unsigned char *a_sid = SSL_SESSION_get_id(a, &a_len);
+    unsigned int b_len;
+    const unsigned char *b_sid = SSL_SESSION_get_id(b, &b_len);
+
+#if !defined(HAVE_SSL_SESSION_GET_ID) /* 1.0.2 or older */
+    if (a->ssl_version != b->ssl_version)
+	return 1;
+#endif
+    if (a_len != b_len)
+	return 1;
+
+#if defined(_WIN32)
+    return memcmp(a_sid, b_sid, a_len);
+#else
+    return CRYPTO_memcmp(a_sid, b_sid, a_len);
+#endif
+}
+
 /*
  * call-seq:
  *    session1 == session2 -> boolean
@@ -85,7 +108,7 @@ static VALUE ossl_ssl_session_eq(VALUE val1, VALUE val2)
 	GetSSLSession(val1, ctx1);
 	SafeGetSSLSession(val2, ctx2);
 
-	switch (SSL_SESSION_cmp(ctx1, ctx2)) {
+	switch (xSSL_SESSION_cmp(ctx1, ctx2)) {
 	case 0:		return Qtrue;
 	default:	return Qfalse;
 	}

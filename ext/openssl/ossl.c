@@ -462,7 +462,7 @@ ossl_fips_mode_set(VALUE self, VALUE enabled)
 #endif
 }
 
-#ifdef HAVE_CRYPTO_LOCK /* OpenSSL 1.0.2 or older */
+#ifndef HAVE_OPENSSL_110_THREADING_API
 /**
  * Stores locks needed for OpenSSL thread safety
  */
@@ -1150,7 +1150,7 @@ Init_openssl(void)
      */
     ossl_s_to_der = rb_intern("to_der");
 
-#ifdef HAVE_CRYPTO_LOCK
+#ifndef HAVE_OPENSSL_110_THREADING_API
     Init_ossl_locks();
 #endif
 

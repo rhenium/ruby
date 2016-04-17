@@ -1206,6 +1206,36 @@ end
     end
   end
 
+  def test_set_elliptic_curves
+    return unless OpenSSL::SSL::SSLSocket.method_defined?(:tmp_key) and
+      OpenSSL::SSL::SSLContext.method_defined?(:set_elliptic_curves)
+    sock1, sock2 = socketpair
+
+    ctx1 = OpenSSL::SSL::SSLContext.new
+    ctx1.ciphers = "AECDH-AES256-SHA"
+    ctx1.security_level = 0
+    s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
+
+    ctx2 = OpenSSL::SSL::SSLContext.new
+    ctx2.ciphers = "AECDH-AES256-SHA"
+    ctx2.security_level = 0
+    ctx2.set_elliptic_curves("P-521")
+    s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
+
+    th = Thread.new { s1.connect }
+    s2.accept
+
+    assert s2.cipher[0].start_with?("AECDH"), "AECDH should be used"
+    # TODO: how to detect what curve was used?
+    # test that the curve is secp521r1
+  ensure
+    th.join if th
+    s1.close if s1
+    s2.close if s2
+    sock1.close if sock1
+    sock2.close if sock2
+  end
+
   private
 
   def start_server_version(version, ctx_proc=nil, server_proc=nil, &blk)

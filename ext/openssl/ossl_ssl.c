@@ -270,7 +270,7 @@ ossl_tmp_dh_callback(SSL *ssl, int is_export, int keylength)
 }
 #endif /* OPENSSL_NO_DH */
 
-#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK) && !defined(HAVE_SSL_CTX_SET1_CURVES_LIST)
 static EC_KEY *
 ossl_tmp_ecdh_callback(SSL *ssl, int is_export, int keylength)
 {
@@ -696,7 +696,7 @@ ossl_sslctx_setup(VALUE self)
     SSL_CTX_set_tmp_dh_callback(ctx, ossl_tmp_dh_callback);
 #endif
 
-#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK) && !defined(HAVE_SSL_CTX_SET1_CURVES_LIST)
     SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
 #endif
 
@@ -1012,9 +1012,14 @@ ossl_sslctx_set_elliptic_curves(VALUE self, VALUE str)
     if (!ctx)
 	ossl_raise(eSSLError, "SSL_CTX is not initialized.");
 
-#if defined(HAVE_SSL_CTX_SET1_CURVES_LIST) /* OpenSSL 1.0.2- */
+#if defined(HAVE_SSL_CTX_SET1_CURVES_LIST)
     if (!SSL_CTX_set1_curves_list(ctx, cstr))
 	ossl_raise(eSSLError, "SSL_CTX_set1_curves_list");
+#if defined(HAVE_SSL_CTX_SET_ECDH_AUTO)
+    /* always enabled in 1.1.0, needed only in 1.0.2 */
+    if (!SSL_CTX_set_ecdh_auto(ctx, 1))
+	ossl_raise(eSSLError, "SSL_CTX_set_ecdh_auto");
+#endif
 #else
     if (strstr(cstr, ":"))
 	ossl_raise(eSSLError, "only one curve can be specified");

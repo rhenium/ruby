@@ -380,51 +380,6 @@ module OpenSSL::TestPairM
     accepted.close if accepted.respond_to?(:close)
   end
 
-  def test_set_elliptic_curves
-    ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "ECDH:DH"
-    ctx2.security_level = 0
-    ctx2.set_elliptic_curves("P-384")
-
-    sock1, sock2 = tcp_pair
-
-    s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
-    ctx1 = OpenSSL::SSL::SSLContext.new
-    ctx1.ciphers = "ECDH:DH"
-    ctx1.security_level = 0
-
-    s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
-    th = Thread.new do
-      begin
-        rv = s1.connect_nonblock(exception: false)
-        case rv
-        when :wait_writable
-          IO.select(nil, [s1], nil, 5)
-        when :wait_readable
-          IO.select([s1], nil, nil, 5)
-        end
-      end until rv == s1
-    end
-
-    accepted = s2.accept
-
-    assert accepted.cipher[0].start_with?("AECDH"), "AECDH should be used"
-    # TODO: how to detect what curve was used?
-  rescue OpenSSL::SSL::SSLError => e
-    if e.message =~ /no cipher match/
-      skip "ECDH cipher not supported."
-    else
-      raise e
-    end
-  ensure
-    th.join if th
-    s1.close if s1
-    s2.close if s2
-    sock1.close if sock1
-    sock2.close if sock2
-    accepted.close if accepted.respond_to?(:close)
-  end
-
   def test_connect_accept_nonblock_no_exception
     ctx2 = OpenSSL::SSL::SSLContext.new
     ctx2.ciphers = "ADH"
