@@ -200,6 +200,7 @@ int X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial);
 
 
 /*** added in 0.9.8 ***/
+#if defined(HAVE_BN_GENCB)
 #if !defined(HAVE_BN_IS_PRIME_EX)
 int BN_is_prime_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, BN_GENCB *cb);
 #endif
@@ -210,6 +211,7 @@ int BN_is_prime_fasttest_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, int do_tr
 
 #if !defined(HAVE_BN_GENERATE_PRIME_EX)
 int BN_generate_prime_ex(BIGNUM *ret, int bits, int safe, const BIGNUM *add, const BIGNUM *rem, BN_GENCB *cb);
+#endif
 #endif
 
 #if !defined(HAVE_EVP_CIPHER_CTX_NEW)
@@ -300,6 +302,7 @@ int EC_curve_nist2nid(const char *str);
 #endif
 
 /*** added in 1.1.0 ***/
+#if defined(HAVE_BN_GENCB)
 #if !defined(HAVE_BN_GENCB_NEW)
 #  define BN_GENCB_new() ((BN_GENCB *)OPENSSL_malloc(sizeof(BN_GENCB)))
 #endif
@@ -310,6 +313,7 @@ int EC_curve_nist2nid(const char *str);
 
 #if !defined(HAVE_BN_GENCB_GET_ARG)
 #  define BN_GENCB_get_arg(cb) (cb)->arg
+#endif
 #endif
 
 #if !defined(HAVE_HMAC_CTX_NEW)

@@ -180,10 +180,10 @@ have_func("OCSP_SINGLERESP_get0_id")
 have_struct_member("EVP_PKEY", "type", "openssl/evp.h") # removed
 
 # depending on OpenSSL configuration
-have_func("TLSv1_1_method")
-have_func("TLSv1_2_method")
-have_func("SSLv2_method")
+have_func("SSLv2_method") # removed in 1.1.0
 have_func("SSLv3_method")
+have_func("TLSv1_1_method") # added in 1.0.1
+have_func("TLSv1_2_method") # added in 1.0.1
 have_macro("OPENSSL_FIPS", ['openssl/opensslconf.h']) && $defs.push("-DHAVE_OPENSSL_FIPS")
 
 # LibreSSL support
