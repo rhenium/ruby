@@ -264,6 +264,17 @@ X509_CRL_sort(X509_CRL *c)
 }
 #endif
 
+#if !defined(HAVE_X509_REVOKED_SET_SERIALNUMBER)
+int
+X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial)
+{
+    ASN1_INTEGER *in = x->serialNumber;
+    if (in != serial)
+        return ASN1_STRING_copy(in, serial);
+    return 1;
+}
+#endif
+
 /*** added in 0.9.8 ***/
 #if !defined(HAVE_BN_IS_PRIME_EX)
 int BN_is_prime_ex(const BIGNUM *bn, int checks, BN_CTX *ctx, void *cb)
@@ -509,16 +520,5 @@ X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ *req
 	*psig = req->signature;
     if (palg != NULL)
 	*palg = req->sig_alg;
-}
-#endif
-
-#if !defined(HAVE_X509_REVOKED_SET_SERIALNUMBER)
-int
-X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial)
-{
-    ASN1_INTEGER *in = x->serialNumber;
-    if (in != serial)
-        return ASN1_STRING_copy(in, serial);
-    return 1;
 }
 #endif

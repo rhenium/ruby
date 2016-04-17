@@ -186,14 +186,8 @@ int X509_CRL_set_version(X509_CRL *x, long version);
 int X509_CRL_sort(X509_CRL *c);
 #endif
 
-#if !defined(HAVE_X509_STORE_GET_EX_DATA)
-#  define X509_STORE_get_ex_data(str, idx) \
-	CRYPTO_get_ex_data(&(str)->ex_data, idx)
-#endif
-
-#if !defined(HAVE_X509_STORE_SET_EX_DATA)
-#  define X509_STORE_set_ex_data(str, idx, data) \
-	CRYPTO_set_ex_data(&(str)->ex_data, idx, data)
+#if !defined(HAVE_X509_REVOKED_SET_SERIALNUMBER)
+int X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial);
 #endif
 
 #if !defined(HAVE_X509V3_SET_NCONF)
@@ -269,6 +263,14 @@ void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #if !defined(HAVE_X509_NAME_HASH_OLD)
 #endif
 
+#if !defined(HAVE_X509_STORE_CTX_GET0_CURRENT_CRL)
+#  define X509_STORE_CTX_get0_current_crl(x) ((x)->current_crl)
+#endif
+
+#if !defined(HAVE_X509_STORE_SET_VERIFY_CB)
+#  define X509_STORE_set_verify_cb(x, cb) X509_STORE_set_verify_cb_func((x), (cb))
+#endif
+
 #if !defined(HAVE_SSL_SET_TLSEXT_HOST_NAME)
 #endif
 
@@ -279,6 +281,10 @@ void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 /*** added in 1.0.2 ***/
 #if !defined(HAVE_EC_CURVE_NIST2NID)
 int EC_curve_nist2nid(const char *str);
+#endif
+
+#if !defined(HAVE_X509_STORE_CTX_GET0_STORE)
+#  define X509_STORE_CTX_get0_store(x) ((x)->ctx)
 #endif
 
 #if !defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB)
@@ -356,12 +362,30 @@ void X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ
 #  define X509_REVOKED_get0_serialNumber(x) ((x)->serialNumber)
 #endif
 
-#if !defined(HAVE_X509_REVOKED_SET_SERIALNUMBER)
-int X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial);
+#if !defined(HAVE_X509_REVOKED_GET0_REVOCATIONDATE)
+#  define X509_REVOKED_get0_revocationDate(x) ((x)->revocationDate)
 #endif
 
-#if !defined(HAVE_X509_REVOKED_GET0_REVOCATIONDATE)
-#  define X509_REVOKED_get0_revocationDate(x) (x->revocationDate)
+#if !defined(HAVE_X509_STORE_CTX_GET0_UNTRUSTED)
+#  define X509_STORE_CTX_get0_untrusted(x) ((x)->untrusted)
+#endif
+
+#if !defined(HAVE_X509_STORE_CTX_GET0_CERT)
+#  define X509_STORE_CTX_get0_cert(x) ((x)->cert)
+#endif
+
+#if !defined(HAVE_X509_STORE_CTX_GET0_CHAIN)
+#  define X509_STORE_CTX_get0_chain(ctx) X509_STORE_CTX_get_chain(ctx)
+#endif
+
+#if !defined(HAVE_X509_STORE_GET_EX_DATA)
+#  define X509_STORE_get_ex_data(str, idx) \
+	CRYPTO_get_ex_data(&(str)->ex_data, idx)
+#endif
+
+#if !defined(HAVE_X509_STORE_SET_EX_DATA)
+#  define X509_STORE_set_ex_data(str, idx, data) \
+	CRYPTO_set_ex_data(&(str)->ex_data, idx, data)
 #endif
 
 #if !defined(HAVE_TLS_METHOD)

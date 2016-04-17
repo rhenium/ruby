@@ -133,6 +133,8 @@ have_func("EVP_PKEY_base_id")
 have_func("HMAC_CTX_copy")
 have_func("PKCS5_PBKDF2_HMAC")
 have_func("X509_NAME_hash_old")
+have_func("X509_STORE_CTX_get0_current_crl")
+have_func("X509_STORE_set_verify_cb")
 have_func_or_macro("SSL_set_tlsext_host_name", 'openssl/ssl.h')
 
 # added in 1.0.1
@@ -141,6 +143,7 @@ have_macro("EVP_CTRL_GCM_GET_TAG", ['openssl/evp.h']) && $defs.push("-DHAVE_AUTH
 
 # added in 1.0.2
 have_func("EC_curve_nist2nid")
+have_func("X509_STORE_CTX_get0_store")
 have_func("SSL_CTX_set_alpn_select_cb")
 have_func_or_macro("SSL_CTX_set1_curves_list", "openssl/ssl.h")
 have_func_or_macro("SSL_CTX_set_ecdh_auto", "openssl/ssl.h") # removed in 1.1.0
@@ -162,6 +165,14 @@ have_func("X509_REQ_get0_signature")
 have_func("X509_get0_tbs_sigalg")
 have_func("X509_REVOKED_get0_serialNumber")
 have_func("X509_REVOKED_get0_revocationDate")
+have_func("X509_STORE_CTX_get0_untrusted")
+have_func("X509_STORE_CTX_get0_cert")
+have_func("X509_STORE_CTX_get0_chain")
+
+# doesn't exist on any version of OpenSSL
+have_func("X509_STORE_get_ex_data")
+have_func("X509_STORE_set_ex_data")
+
 have_func("TLS_method") # renamed from SSLv23_method
 have_func("SSL_CTX_get_ciphers")
 have_func("SSL_CTX_get_security_level")
@@ -177,10 +188,6 @@ have_macro("OPENSSL_FIPS", ['openssl/opensslconf.h']) && $defs.push("-DHAVE_OPEN
 
 # LibreSSL support
 have_func("RAND_egd") # removed
-
-# doesn't exist on any version of OpenSSL
-have_func("X509_STORE_get_ex_data")
-have_func("X509_STORE_set_ex_data")
 
 Logging::message "=== Checking done. ===\n"
 
