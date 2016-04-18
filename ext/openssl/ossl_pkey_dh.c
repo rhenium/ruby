@@ -276,7 +276,7 @@ ossl_dh_is_private(VALUE self)
     dh = EVP_PKEY_get0_DH(pkey);
     DH_get0_key(dh, NULL, &priv_key);
 
-#ifdef OSSL_ENGINE_ENABLED
+#if defined(HAVE_SUPPORT_ENGINE)
     return (priv_key || DH_get0_engine(dh)) ? Qtrue : Qfalse;
 #else
     return priv_key ? Qtrue : Qfalse;

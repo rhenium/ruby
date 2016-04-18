@@ -176,8 +176,6 @@ BN_mod_sqr(BIGNUM *r, const BIGNUM *a, const BIGNUM *m, BN_CTX *ctx)
 }
 #endif
 
-#if !defined(OPENSSL_NO_HMAC)
-#include <openssl/hmac.h>
 #if !defined(HAVE_HMAC_INIT_EX)
 int
 HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len,
@@ -187,7 +185,6 @@ HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len,
 	rb_bug("impl not supported");
     return HMAC_Init(ctx, key, key_len, md);
 }
-#endif
 #endif
 
 #if !defined(HAVE_X509_CRL_SET_NEXTUPDATE)
@@ -277,7 +274,7 @@ X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial)
 
 /*** added in 0.9.8 ***/
 #if !defined(HAVE_BN_IS_PRIME_EX)
-int BN_is_prime_ex(const BIGNUM *bn, int checks, BN_CTX *ctx, void *cb)
+int BN_is_prime_ex(const BIGNUM *bn, int checks, BN_CTX *ctx, BN_GENCB *cb)
 {
     if (cb)
 	rb_bug("not supported");
@@ -287,7 +284,7 @@ int BN_is_prime_ex(const BIGNUM *bn, int checks, BN_CTX *ctx, void *cb)
 
 #if !defined(HAVE_BN_IS_PRIME_FASTTEST_EX)
 int BN_is_prime_fasttestex(const BIGNUM *bn, int checks, BN_CTX *ctx,
-	int do_trial_division, void *cb)
+	int do_trial_division, BN_GENCB *cb)
 {
     if (cb)
 	rb_bug("not supported");
@@ -301,7 +298,7 @@ int BN_generate_prime_ex(BIGNUM *ret, int bits, int safe,
 {
     if (cb)
 	rb_bug("not supported");
-    return BN_generate_prime(ret, bits, safe, add, rem, NULL);
+    return BN_generate_prime(ret, bits, safe, add, rem, NULL, NULL);
 }
 #endif
 
@@ -363,8 +360,6 @@ EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in)
 }
 #endif
 
-#if !defined(OPENSSL_NO_HMAC)
-#include <openssl/hmac.h>
 #if !defined(HAVE_HMAC_CTX_COPY)
 void
 HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
@@ -377,10 +372,10 @@ HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
     EVP_MD_CTX_copy(&out->o_ctx, &in->o_ctx);
 }
 #endif
-#endif
 
 /*** added in 1.0.1 ***/
 /*** added in 1.0.2 ***/
+#if defined(HAVE_SUPPORT_EC)
 #if !defined(HAVE_EC_CURVE_NIST2NID)
 static struct {
     const char *name;
@@ -414,10 +409,9 @@ EC_curve_nist2nid(const char *name)
     return NID_undef;
 }
 #endif
+#endif
 
 /*** added in 1.1.0 ***/
-#if !defined(OPENSSL_NO_HMAC)
-#include <openssl/hmac.h>
 #if !defined(HAVE_HMAC_CTX_NEW)
 HMAC_CTX *
 HMAC_CTX_new(void)
@@ -467,7 +461,6 @@ HMAC_CTX_reset(HMAC_CTX *ctx)
 #endif
     return 0;
 }
-#endif
 #endif
 
 #if !defined(HAVE_EVP_MD_CTX_NEW)

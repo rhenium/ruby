@@ -992,7 +992,7 @@ ossl_sslctx_set_security_level(VALUE self, VALUE v)
     return v;
 }
 
-#ifndef OPENSSL_NO_EC
+#if defined(HAVE_SUPPORT_EC)
 /*
  * call-seq:
  *    ctx.set_elliptic_curves("curve1:curve2:curve3") -> self
@@ -1033,7 +1033,7 @@ ossl_sslctx_set_elliptic_curves(VALUE self, VALUE str)
 
     return self;
 }
-#endif
+#endif /* HAVE_SUPPORT_EC */
 
 /*
  *  call-seq:
@@ -2294,7 +2294,9 @@ Init_ossl_ssl(void)
     rb_define_method(cSSLContext, "ciphers=",    ossl_sslctx_set_ciphers, 1);
     rb_define_method(cSSLContext, "security_level", ossl_sslctx_get_security_level, 0);
     rb_define_method(cSSLContext, "security_level=", ossl_sslctx_set_security_level, 1);
+#if defined(HAVE_SUPPORT_EC)
     rb_define_method(cSSLContext, "set_elliptic_curves", ossl_sslctx_set_elliptic_curves, 1);
+#endif
 
     rb_define_method(cSSLContext, "setup", ossl_sslctx_setup, 0);
 

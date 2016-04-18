@@ -11,6 +11,7 @@
 #define _OSSL_OPENSSL_MISSING_H_
 
 #include <openssl/ssl.h>
+#include <openssl/hmac.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -154,7 +155,6 @@ int BN_mod_sqr(BIGNUM *r, const BIGNUM *a, const BIGNUM *m, BN_CTX *ctx);
 #  define EVP_CipherFinal_ex(ctx, outm, outl) EVP_CipherFinal((ctx), (outm), (outl))
 #endif
 
-#if !defined(OPENSSL_NO_HMAC)
 #if !defined(HAVE_HMAC_INIT_EX)
 int HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len, const EVP_MD *md, void *impl);
 #endif
@@ -163,7 +163,6 @@ int HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len, const EVP_MD *md, 
 #endif
 
 #if !defined(HAVE_HMAC_CTX_CLEANUP)
-#endif
 #endif
 
 #if !defined(HAVE_X509_CRL_SET_NEXTUPDATE)
@@ -200,7 +199,11 @@ int X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial);
 
 
 /*** added in 0.9.8 ***/
-#if defined(HAVE_BN_GENCB)
+#if !defined(HAVE_BN_GENCB)
+/* implementation in openssl_missing.c will fail if cb is set */
+typedef struct ossl_pseudo_bn_gencb_struct BN_GENCB;
+#endif
+
 #if !defined(HAVE_BN_IS_PRIME_EX)
 int BN_is_prime_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, BN_GENCB *cb);
 #endif
@@ -211,7 +214,6 @@ int BN_is_prime_fasttest_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, int do_tr
 
 #if !defined(HAVE_BN_GENERATE_PRIME_EX)
 int BN_generate_prime_ex(BIGNUM *ret, int bits, int safe, const BIGNUM *add, const BIGNUM *rem, BN_GENCB *cb);
-#endif
 #endif
 
 #if !defined(HAVE_EVP_CIPHER_CTX_NEW)
@@ -232,7 +234,7 @@ void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx);
 #endif
 
 #if !defined(HAVE_SSL_SESSION_GET_ID)
-int SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
+const unsigned char *SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
 #endif
 
 #if !defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
@@ -281,8 +283,10 @@ void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #endif
 
 /*** added in 1.0.2 ***/
+#if defined(HAVE_SUPPORT_EC)
 #if !defined(HAVE_EC_CURVE_NIST2NID)
 int EC_curve_nist2nid(const char *str);
+#endif
 #endif
 
 #if !defined(HAVE_X509_STORE_CTX_GET0_STORE)
@@ -415,7 +419,9 @@ static inline STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx) { re
 #if defined(HAVE_EVP_PKEY_TYPE) /* is not opaque */
 static inline RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey) { return pkey->pkey.rsa; }
 static inline DSA *EVP_PKEY_get0_DSA(EVP_PKEY *pkey) { return pkey->pkey.dsa; }
+# if defined(HAVE_SUPPORT_EC)
 static inline EC_KEY *EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey) { return pkey->pkey.ec; }
+# endif
 static inline DH *EVP_PKEY_get0_DH(EVP_PKEY *pkey) { return pkey->pkey.dh; }
 
 static inline void RSA_get0_key(RSA *rsa, BIGNUM **n, BIGNUM **e, BIGNUM **d) {

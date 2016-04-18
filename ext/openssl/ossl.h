@@ -68,8 +68,7 @@ extern "C" {
 #endif
 #undef X509_NAME
 #undef PKCS7_SIGNER_INFO
-#if defined(HAVE_OPENSSL_ENGINE_H) && defined(HAVE_EVP_CIPHERINIT_EX)
-#  define OSSL_ENGINE_ENABLED
+#if defined(HAVE_SUPPORT_ENGINE)
 #  include <openssl/engine.h>
 #endif
 #if defined(HAVE_OPENSSL_OCSP_H)

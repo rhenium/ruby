@@ -69,6 +69,16 @@ def have_funcish(name)
 end
 
 Logging::message "=== Checking for OpenSSL features... ===\n"
+# OpenSSL compile options
+have_func("SSLv2_method") # removed in 1.1.0
+have_func("SSLv3_method")
+have_func("TLSv1_1_method") # added in 1.0.1
+have_func("TLSv1_2_method") # added in 1.0.1
+have_macro("OPENSSL_FIPS", ['openssl/opensslconf.h']) && $defs.push("-DHAVE_OPENSSL_FIPS")
+have_func("EC_KEY_new") && $defs.push("-DHAVE_SUPPORT_EC")
+# HMAC can't be disabled
+have_func("ENGINE_new") && $defs.push("-DHAVE_SUPPORT_ENGINE")
+
 # added in 0.9.6a-0.9.7
 have_func("OPENSSL_cleanse")
 have_func("ERR_peek_last_error")
@@ -102,7 +112,6 @@ have_func("X509_REVOKED_set_serialNumber")
 have_func("X509V3_set_nconf")
 have_func("X509V3_EXT_nconf_nid")
 
-have_header("openssl/engine.h")
 have_func("ENGINE_add")
 have_func("ENGINE_get_digest")
 have_func("ENGINE_get_cipher")
@@ -114,6 +123,7 @@ engines.each { |name| have_func_or_macro("ENGINE_load_#{name}", "openssl/engine.
 have_header("openssl/ocsp.h")
 
 # added in -0.9.8
+have_func("BN_GENCB_call") && $defs.push("-DHAVE_BN_GENCB")
 have_func("BN_is_prime_ex")
 have_func("BN_is_prime_fasttest_ex")
 have_func("BN_generate_prime_ex")
@@ -179,12 +189,6 @@ have_func("SSL_CTX_get_security_level")
 have_func("OCSP_SINGLERESP_get0_id")
 have_struct_member("EVP_PKEY", "type", "openssl/evp.h") # removed
 
-# depending on OpenSSL configuration
-have_func("SSLv2_method") # removed in 1.1.0
-have_func("SSLv3_method")
-have_func("TLSv1_1_method") # added in 1.0.1
-have_func("TLSv1_2_method") # added in 1.0.1
-have_macro("OPENSSL_FIPS", ['openssl/opensslconf.h']) && $defs.push("-DHAVE_OPENSSL_FIPS")
 
 # LibreSSL support
 have_func("RAND_egd") # removed

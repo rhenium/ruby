@@ -4,7 +4,7 @@
 
 #include "ossl.h"
 
-#if !defined(OPENSSL_NO_EC) && (OPENSSL_VERSION_NUMBER >= 0x0090802fL)
+#if defined(HAVE_SUPPORT_EC)
 
 typedef struct {
 	EC_GROUP *group;
@@ -1698,8 +1698,8 @@ void Init_ossl_ec(void)
     no_copy(cEC_POINT);
 }
 
-#else /* defined NO_EC */
+#else /* SUPPORT_EC */
 void Init_ossl_ec(void)
 {
 }
-#endif /* NO_EC */
+#endif /* !SUPPORT_EC */
