@@ -73,7 +73,6 @@ ossl_dh_new(EVP_PKEY *pkey)
 /*
  * Private
  */
-#if defined(HAVE_DH_GENERATE_PARAMETERS_EX) && HAVE_BN_GENCB
 struct dh_blocking_gen_arg {
     DH *dh;
     int size;
@@ -89,12 +88,10 @@ dh_blocking_gen(void *arg)
     gen->result = DH_generate_parameters_ex(gen->dh, gen->size, gen->gen, gen->cb);
     return 0;
 }
-#endif
 
 static DH *
 dh_generate(int size, int gen)
 {
-#if defined(HAVE_DH_GENERATE_PARAMETERS_EX) && HAVE_BN_GENCB
     struct ossl_generate_cb_arg cb_arg;
     struct dh_blocking_gen_arg gen_arg;
     DH *dh = DH_new();
@@ -128,12 +125,6 @@ dh_generate(int size, int gen)
 	if (cb_arg.state) rb_jump_tag(cb_arg.state);
 	return 0;
     }
-#else
-    DH *dh;
-
-    dh = DH_generate_parameters(size, gen, rb_block_given_p() ? ossl_generate_cb : NULL, NULL);
-    if (!dh) return 0;
-#endif
 
     if (!DH_generate_key(dh)) {
         DH_free(dh);
@@ -276,7 +267,7 @@ ossl_dh_is_private(VALUE self)
     dh = EVP_PKEY_get0_DH(pkey);
     DH_get0_key(dh, NULL, &priv_key);
 
-#if defined(HAVE_SUPPORT_ENGINE)
+#if !defined(OPENSSL_NO_ENGINE)
     return (priv_key || DH_get0_engine(dh)) ? Qtrue : Qfalse;
 #else
     return priv_key ? Qtrue : Qfalse;

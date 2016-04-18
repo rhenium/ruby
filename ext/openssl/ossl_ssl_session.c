@@ -82,7 +82,7 @@ xSSL_SESSION_cmp(const SSL_SESSION *a, const SSL_SESSION *b)
     unsigned int b_len;
     const unsigned char *b_sid = SSL_SESSION_get_id(b, &b_len);
 
-#if !defined(HAVE_SSL_SESSION_GET_ID) /* 1.0.2 or older */
+#if !defined(HAVE_OPAQUE_OPENSSL)
     if (a->ssl_version != b->ssl_version)
 	return 1;
 #endif

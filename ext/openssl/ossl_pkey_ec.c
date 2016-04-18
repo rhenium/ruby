@@ -4,7 +4,7 @@
 
 #include "ossl.h"
 
-#if defined(HAVE_SUPPORT_EC)
+#if !defined(OPENSSL_NO_EC)
 
 typedef struct {
 	EC_GROUP *group;

@@ -17,205 +17,7 @@
 extern "C" {
 #endif
 
-/* added in -0.9.7 */
-/* These functions are not included in headers of OPENSSL <= 0.9.6b */
-#ifndef TYPEDEF_D2I_OF
-typedef char *d2i_of_void(void **, const unsigned char **, long);
-#endif
-#ifndef TYPEDEF_I2D_OF
-typedef int i2d_of_void(void *, unsigned char **);
-#endif
-
-#if !defined(PEM_read_bio_DSAPublicKey)
-# define PEM_read_bio_DSAPublicKey(bp,x,cb,u) (DSA *)PEM_ASN1_read_bio( \
-	(d2i_of_void *)d2i_DSAPublicKey,PEM_STRING_DSA_PUBLIC,(bp),(void **)(x),(cb),(u))
-#endif
-
-#if !defined(PEM_write_bio_DSAPublicKey)
-# define PEM_write_bio_DSAPublicKey(bp,x) \
-	PEM_ASN1_write_bio((i2d_of_void *)i2d_DSAPublicKey,\
-		PEM_STRING_DSA_PUBLIC,\
-		(bp),(char *)(x), NULL, NULL, 0, NULL, NULL)
-#endif
-
-#if !defined(DSAPrivateKey_dup)
-# define DSAPrivateKey_dup(dsa) (DSA *)ASN1_dup((i2d_of_void *)i2d_DSAPrivateKey, \
-	(d2i_of_void *)d2i_DSAPrivateKey,(char *)(dsa))
-#endif
-
-#if !defined(DSAPublicKey_dup)
-# define DSAPublicKey_dup(dsa) (DSA *)ASN1_dup((i2d_of_void *)i2d_DSAPublicKey, \
-	(d2i_of_void *)d2i_DSAPublicKey,(char *)(dsa))
-#endif
-
-#if !defined(X509_REVOKED_dup)
-# define X509_REVOKED_dup(rev) (X509_REVOKED *)ASN1_dup((i2d_of_void *)i2d_X509_REVOKED, \
-	(d2i_of_void *)d2i_X509_REVOKED, (char *)(rev))
-#endif
-
-#if !defined(PKCS7_SIGNER_INFO_dup)
-#  define PKCS7_SIGNER_INFO_dup(si) (PKCS7_SIGNER_INFO *)ASN1_dup((i2d_of_void *)i2d_PKCS7_SIGNER_INFO, \
-	(d2i_of_void *)d2i_PKCS7_SIGNER_INFO, (char *)(si))
-#endif
-
-#if !defined(PKCS7_RECIP_INFO_dup)
-#  define PKCS7_RECIP_INFO_dup(ri) (PKCS7_RECIP_INFO *)ASN1_dup((i2d_of_void *)i2d_PKCS7_RECIP_INFO, \
-	(d2i_of_void *)d2i_PKCS7_RECIP_INFO, (char *)(ri))
-#endif
-
-
-#if !defined(EVP_CIPHER_name)
-#  define EVP_CIPHER_name(e) OBJ_nid2sn(EVP_CIPHER_nid(e))
-#endif
-
-#if !defined(EVP_MD_name)
-#  define EVP_MD_name(e) OBJ_nid2sn(EVP_MD_type(e))
-#endif
-
-#if !defined(PKCS7_is_detached)
-#  define PKCS7_is_detached(p7) (PKCS7_type_is_signed(p7) && PKCS7_get_detached(p7))
-#endif
-
-#if !defined(PKCS7_type_is_encrypted)
-#  define PKCS7_type_is_encrypted(a) (OBJ_obj2nid((a)->type) == NID_pkcs7_encrypted)
-#endif
-
-/* start: checked by extconf.rb */
-#if !defined(HAVE_OPENSSL_CLEANSE)
-#define OPENSSL_cleanse(p, l) memset((p), 0, (l))
-#endif
-
-#if !defined(HAVE_ERR_PEEK_LAST_ERROR)
-#endif
-
-#if !defined(HAVE_CONF_GET1_DEFAULT_CONFIG_FILE)
-char *CONF_get1_default_config_file(void);
-#endif
-
-#if !defined(HAVE_ASN1_PUT_EOC)
-int ASN1_put_eoc(unsigned char **pp);
-#endif
-
-#if !defined(HAVE_OBJ_NAME_DO_ALL_SORTED)
-#endif
-
-#if !defined(HAVE_PEM_DEF_CALLBACK)
-int PEM_def_callback(char *buf, int num, int w, void *key);
-#endif
-
-#if !defined(HAVE_BN_RAND_RANGE)
-int BN_rand_range(BIGNUM *r, const BIGNUM *range);
-#endif
-
-#if !defined(HAVE_BN_PSEUDO_RAND_RANGE)
-int BN_pseudo_rand_range(BIGNUM *r, const BIGNUM *range);
-#endif
-
-#if !defined(HAVE_BN_NNMOD)
-int BN_nnmod(BIGNUM *r, const BIGNUM *m, const BIGNUM *d, BN_CTX *ctx);
-#endif
-
-#if !defined(HAVE_BN_MOD_ADD)
-int BN_mod_add(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const BIGNUM *m, BN_CTX *ctx);
-#endif
-
-#if !defined(HAVE_BN_MOD_SUB)
-int BN_mod_sub(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const BIGNUM *m, BN_CTX *ctx);
-#endif
-
-#if !defined(HAVE_BN_MOD_SQR)
-int BN_mod_sqr(BIGNUM *r, const BIGNUM *a, const BIGNUM *m, BN_CTX *ctx);
-#endif
-
-#if !defined(HAVE_MD_CTX_INIT)
-#endif
-
-#if !defined(HAVE_MD_CTX_CREATE)
-#endif
-
-#if !defined(HAVE_MD_CTX_DESTROY)
-#endif
-
-#if !defined(HAVE_EVP_CIPHER_CTX_SET_PADDING)
-#endif
-
-#if !defined(HAVE_EVP_DIGESTINIT_EX)
-#  define EVP_DigestInit_ex(ctx, md, engine) EVP_DigestInit((ctx), (md))
-#endif
-
-#if !defined(HAVE_EVP_DIGESTFINAL_EX)
-#  define EVP_DigestFinal_ex(ctx, buf, len) EVP_DigestFinal((ctx), (buf), (len))
-#endif
-
-#if !defined(HAVE_EVP_CIPHERINIT_EX)
-#  define EVP_CipherInit_ex(ctx, type, impl, key, iv, enc) EVP_CipherInit((ctx), (type), (key), (iv), (enc))
-#endif
-
-#if !defined(HAVE_EVP_CIPHERFINAL_EX)
-#  define EVP_CipherFinal_ex(ctx, outm, outl) EVP_CipherFinal((ctx), (outm), (outl))
-#endif
-
-#if !defined(HAVE_HMAC_INIT_EX)
-int HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len, const EVP_MD *md, void *impl);
-#endif
-
-#if !defined(HAVE_HMAC_CTX_INIT)
-#endif
-
-#if !defined(HAVE_HMAC_CTX_CLEANUP)
-#endif
-
-#if !defined(HAVE_X509_CRL_SET_NEXTUPDATE)
-int X509_CRL_set_nextUpdate(X509_CRL *x, const ASN1_TIME *tm);
-#endif
-
-#if !defined(HAVE_X509_CRL_ADD0_REVOKED)
-int X509_CRL_add0_revoked(X509_CRL *crl, X509_REVOKED *rev);
-#endif
-
-#if !defined(HAVE_X509_CRL_SET_ISSUER_NAME)
-int X509_CRL_set_issuer_name(X509_CRL *x, X509_NAME *name);
-#endif
-
-#if !defined(HAVE_X509_CRL_SET_VERSION)
-int X509_CRL_set_version(X509_CRL *x, long version);
-#endif
-
-#if !defined(HAVE_X509_CRL_SORT)
-int X509_CRL_sort(X509_CRL *c);
-#endif
-
-#if !defined(HAVE_X509_REVOKED_SET_SERIALNUMBER)
-int X509_REVOKED_set_serialNumber(X509_REVOKED *x, ASN1_INTEGER *serial);
-#endif
-
-#if !defined(HAVE_X509V3_SET_NCONF)
-#endif
-
-#if !defined(HAVE_X509V3_EXT_NCONF_NID)
-#endif
-
-/* ENGINE related API can't be polyfilled */
-
-
-/*** added in 0.9.8 ***/
-#if !defined(HAVE_BN_GENCB)
-/* implementation in openssl_missing.c will fail if cb is set */
-typedef struct ossl_pseudo_bn_gencb_struct BN_GENCB;
-#endif
-
-#if !defined(HAVE_BN_IS_PRIME_EX)
-int BN_is_prime_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, BN_GENCB *cb);
-#endif
-
-#if !defined(HAVE_BN_IS_PRIME_FASTTEST_EX)
-int BN_is_prime_fasttest_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, int do_trial_division, BN_GENCB *cb);
-#endif
-
-#if !defined(HAVE_BN_GENERATE_PRIME_EX)
-int BN_generate_prime_ex(BIGNUM *ret, int bits, int safe, const BIGNUM *add, const BIGNUM *rem, BN_GENCB *cb);
-#endif
-
+/*** added in 0.9.8X ***/
 #if !defined(HAVE_EVP_CIPHER_CTX_NEW)
 EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void);
 #endif
@@ -224,26 +26,11 @@ EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void);
 void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx);
 #endif
 
-#if !defined(HAVE_DH_GENERATE_PARAMETERS_EX)
+#if !defined(HAVE_SSL_CTX_CLEAR_OPTIONS)
+#  define SSL_CTX_clear_options(ctx, op) do \
+	(ctx)->options &= ~(op); while (0)
 #endif
 
-#if !defined(HAVE_DSA_GENERATE_PARAMETERS_EX)
-#endif
-
-#if !defined(HAVE_RSA_GENERATE_KEY_EX)
-#endif
-
-#if !defined(HAVE_SSL_SESSION_GET_ID)
-const unsigned char *SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
-#endif
-
-#if !defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
-#endif
-
-#if !defined(HAVE_OCSP_SINGLERESP_DELETE_EXT)
-#  define OCSP_SINGLERESP_delete_ext(s, loc) \
-	sk_X509_EXTENSION_delete((s)->singleExtensions, (loc))
-#endif
 
 /*** added in 1.0.0 ***/
 #if !defined(HAVE_CRYPTO_THREADID_PTR)
@@ -283,7 +70,13 @@ void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #endif
 
 /*** added in 1.0.2 ***/
-#if defined(HAVE_SUPPORT_EC)
+#if !defined(HAVE_CRYPTO_MEMCMP)
+int CRYPTO_memcmp(const volatile void * volatile in_a,
+		  const volatile void * volatile in_b,
+		  size_t len);
+#endif
+
+#if !defined(OPENSSL_NO_EC)
 #if !defined(HAVE_EC_CURVE_NIST2NID)
 int EC_curve_nist2nid(const char *str);
 #endif
@@ -291,6 +84,11 @@ int EC_curve_nist2nid(const char *str);
 
 #if !defined(HAVE_X509_STORE_CTX_GET0_STORE)
 #  define X509_STORE_CTX_get0_store(x) ((x)->ctx)
+#endif
+
+#if !defined(HAVE_X509_REVOKED_DUP)
+# define X509_REVOKED_dup(rev) (X509_REVOKED *)ASN1_dup((i2d_of_void *)i2d_X509_REVOKED, \
+       (d2i_of_void *)d2i_X509_REVOKED, (char *)(rev))
 #endif
 
 #if !defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB)
@@ -306,7 +104,6 @@ int EC_curve_nist2nid(const char *str);
 #endif
 
 /*** added in 1.1.0 ***/
-#if defined(HAVE_BN_GENCB)
 #if !defined(HAVE_BN_GENCB_NEW)
 #  define BN_GENCB_new() ((BN_GENCB *)OPENSSL_malloc(sizeof(BN_GENCB)))
 #endif
@@ -317,7 +114,6 @@ int EC_curve_nist2nid(const char *str);
 
 #if !defined(HAVE_BN_GENCB_GET_ARG)
 #  define BN_GENCB_get_arg(cb) (cb)->arg
-#endif
 #endif
 
 #if !defined(HAVE_HMAC_CTX_NEW)
@@ -416,14 +212,9 @@ static inline STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx) { re
 #  define OCSP_SINGLERESP_get0_id(s) (s)->certId
 #endif
 
-#if defined(HAVE_EVP_PKEY_TYPE) /* is not opaque */
+#if defined(HAVE_EVP_PKEY_TYPE) /* and !HAVE_OPAQUE_OPENSSL */
+#if !defined(OPENSSL_NO_RSA)
 static inline RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey) { return pkey->pkey.rsa; }
-static inline DSA *EVP_PKEY_get0_DSA(EVP_PKEY *pkey) { return pkey->pkey.dsa; }
-# if defined(HAVE_SUPPORT_EC)
-static inline EC_KEY *EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey) { return pkey->pkey.ec; }
-# endif
-static inline DH *EVP_PKEY_get0_DH(EVP_PKEY *pkey) { return pkey->pkey.dh; }
-
 static inline void RSA_get0_key(RSA *rsa, BIGNUM **n, BIGNUM **e, BIGNUM **d) {
 	if (n) *n = rsa->n;
 	if (e) *e = rsa->e;
@@ -452,7 +243,10 @@ static inline int RSA_set0_crt_params(RSA *rsa, BIGNUM *dmp1, BIGNUM *dmq1, BIGN
 	BN_free(rsa->dmq1); rsa->dmq1 = dmq1;
 	BN_free(rsa->iqmp); rsa->iqmp = iqmp;
 	return 1; }
+#endif /* RSA */
 
+#if !defined(OPENSSL_NO_DSA)
+static inline DSA *EVP_PKEY_get0_DSA(EVP_PKEY *pkey) { return pkey->pkey.dsa; }
 static inline void DSA_get0_key(DSA *dsa, BIGNUM **pub_key, BIGNUM **priv_key) {
 	if (pub_key) *pub_key = dsa->pub_key;
 	if (priv_key) *priv_key = dsa->priv_key; }
@@ -471,7 +265,10 @@ static inline int DSA_set0_pqg(DSA *dsa, BIGNUM *p, BIGNUM *q, BIGNUM *g) {
 	BN_free(dsa->q); dsa->q = q;
 	BN_free(dsa->g); dsa->g = g;
 	return 1; }
+#endif /* DSA */
 
+#if !defined(OPENSSL_NO_DH)
+static inline DH *EVP_PKEY_get0_DH(EVP_PKEY *pkey) { return pkey->pkey.dh; }
 static inline ENGINE *DH_get0_engine(DH *dh) { return dh->engine; }
 static inline void DH_get0_key(DH *dh, BIGNUM **pub_key, BIGNUM **priv_key) {
 	if (pub_key) *pub_key = dh->pub_key;
@@ -491,6 +288,11 @@ static inline int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g) {
 	BN_free(dh->q); dh->q = q;
 	BN_free(dh->g); dh->g = g;
 	return 1; }
+#endif /* DH */
+
+#if !defined(OPENSSL_NO_EC)
+static inline EC_KEY *EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey) { return pkey->pkey.ec; }
+#endif
 #endif
 
 #if defined(__cplusplus)

@@ -9,7 +9,7 @@
  */
 #include "ossl.h"
 
-#if defined(HAVE_SUPPORT_ENGINE)
+#if !defined(OPENSSL_NO_ENGINE)
 
 #define NewEngine(klass) \
     TypedData_Wrap_Struct((klass), &ossl_engine_type, 0)
@@ -279,7 +279,6 @@ ossl_engine_finish(VALUE self)
     return Qnil;
 }
 
-#if defined(HAVE_ENGINE_GET_CIPHER)
 /* Document-method: OpenSSL::Engine#cipher
  *
  * call-seq:
@@ -314,11 +313,7 @@ ossl_engine_get_cipher(VALUE self, VALUE name)
 
     return ossl_cipher_new(ciph);
 }
-#else
-#define ossl_engine_get_cipher rb_f_notimplement
-#endif
 
-#if defined(HAVE_ENGINE_GET_DIGEST)
 /* Document-method: OpenSSL::Engine#digest
  *
  * call-seq:
@@ -353,9 +348,6 @@ ossl_engine_get_digest(VALUE self, VALUE name)
 
     return ossl_digest_new(md);
 }
-#else
-#define ossl_engine_get_digest rb_f_notimplement
-#endif
 
 /* Document-method: OpenSSL::Engine#load_private_key
  *
@@ -379,11 +371,7 @@ ossl_engine_load_privkey(int argc, VALUE *argv, VALUE self)
     sid = NIL_P(id) ? NULL : StringValuePtr(id);
     sdata = NIL_P(data) ? NULL : StringValuePtr(data);
     GetEngine(self, e);
-#if OPENSSL_VERSION_NUMBER < 0x00907000L
-    pkey = ENGINE_load_private_key(e, sid, sdata);
-#else
     pkey = ENGINE_load_private_key(e, sid, NULL, sdata);
-#endif
     if (!pkey) ossl_raise(eEngineError, NULL);
     obj = ossl_pkey_new(pkey);
     OSSL_PKEY_SET_PRIVATE(obj);
@@ -413,11 +401,7 @@ ossl_engine_load_pubkey(int argc, VALUE *argv, VALUE self)
     sid = NIL_P(id) ? NULL : StringValuePtr(id);
     sdata = NIL_P(data) ? NULL : StringValuePtr(data);
     GetEngine(self, e);
-#if OPENSSL_VERSION_NUMBER < 0x00907000L
-    pkey = ENGINE_load_public_key(e, sid, sdata);
-#else
     pkey = ENGINE_load_public_key(e, sid, NULL, sdata);
-#endif
     if (!pkey) ossl_raise(eEngineError, NULL);
 
     return ossl_pkey_new(pkey);

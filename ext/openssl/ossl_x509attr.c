@@ -178,14 +178,6 @@ ossl_x509attr_get_oid(VALUE self)
     return ret;
 }
 
-/*#if defined(HAVE_ST_X509_ATTRIBUTE_SINGLE)
-#  define OSSL_X509ATTR_IS_SINGLE(attr)  ((attr)->single)
-#  define OSSL_X509ATTR_SET_SINGLE(attr) ((attr)->single = 1)
-#else
-#  define OSSL_X509ATTR_IS_SINGLE(attr)  (!(attr)->value.set)
-#  define OSSL_X509ATTR_SET_SINGLE(attr) ((attr)->value.set = 0)
-#endif*/
-
 /*
  * call-seq:
  *    attr.value = asn1 => asn1

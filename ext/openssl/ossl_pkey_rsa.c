@@ -83,7 +83,6 @@ ossl_rsa_new(EVP_PKEY *pkey)
 /*
  * Private
  */
-#if defined(HAVE_RSA_GENERATE_KEY_EX) && HAVE_BN_GENCB
 struct rsa_blocking_gen_arg {
     RSA *rsa;
     BIGNUM *e;
@@ -99,12 +98,10 @@ rsa_blocking_gen(void *arg)
     gen->result = RSA_generate_key_ex(gen->rsa, gen->size, gen->e, gen->cb);
     return 0;
 }
-#endif
 
 static RSA *
 rsa_generate(int size, unsigned long exp)
 {
-#if defined(HAVE_RSA_GENERATE_KEY_EX) && HAVE_BN_GENCB
     int i;
     struct ossl_generate_cb_arg cb_arg;
     struct rsa_blocking_gen_arg gen_arg;
@@ -152,9 +149,6 @@ rsa_generate(int size, unsigned long exp)
     }
 
     return rsa;
-#else
-    return RSA_generate_key(size, exp, rb_block_given_p() ? ossl_generate_cb : NULL, NULL);
-#endif
 }
 
 /*

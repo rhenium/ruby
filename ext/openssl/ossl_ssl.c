@@ -90,26 +90,22 @@ static const struct {
     OSSL_SSL_METHOD_ENTRY(TLSv1),
     OSSL_SSL_METHOD_ENTRY(TLSv1_server),
     OSSL_SSL_METHOD_ENTRY(TLSv1_client),
-#if defined(HAVE_TLSV1_2_METHOD) && defined(HAVE_TLSV1_2_SERVER_METHOD) && \
-        defined(HAVE_TLSV1_2_CLIENT_METHOD)
+#if defined(HAVE_TLSV1_2_METHOD)
     OSSL_SSL_METHOD_ENTRY(TLSv1_2),
     OSSL_SSL_METHOD_ENTRY(TLSv1_2_server),
     OSSL_SSL_METHOD_ENTRY(TLSv1_2_client),
 #endif
-#if defined(HAVE_TLSV1_1_METHOD) && defined(HAVE_TLSV1_1_SERVER_METHOD) && \
-        defined(HAVE_TLSV1_1_CLIENT_METHOD)
+#if defined(HAVE_TLSV1_1_METHOD)
     OSSL_SSL_METHOD_ENTRY(TLSv1_1),
     OSSL_SSL_METHOD_ENTRY(TLSv1_1_server),
     OSSL_SSL_METHOD_ENTRY(TLSv1_1_client),
 #endif
-#if defined(HAVE_SSLV2_METHOD) && defined(HAVE_SSLV2_SERVER_METHOD) && \
-        defined(HAVE_SSLV2_CLIENT_METHOD)
+#if defined(HAVE_SSLV2_METHOD)
     OSSL_SSL_METHOD_ENTRY(SSLv2),
     OSSL_SSL_METHOD_ENTRY(SSLv2_server),
     OSSL_SSL_METHOD_ENTRY(SSLv2_client),
 #endif
-#if defined(HAVE_SSLV3_METHOD) && defined(HAVE_SSLV3_SERVER_METHOD) && \
-        defined(HAVE_SSLV3_CLIENT_METHOD)
+#if defined(HAVE_SSLV3_METHOD)
     OSSL_SSL_METHOD_ENTRY(SSLv3),
     OSSL_SSL_METHOD_ENTRY(SSLv3_server),
     OSSL_SSL_METHOD_ENTRY(SSLv3_client),
@@ -945,7 +941,8 @@ ossl_sslctx_set_ciphers(VALUE self, VALUE v)
  * call-seq:
  *    ctx.security_level => 0, .., 5
  *
- * The security level for this context (new in OpenSSL 1.1.0).
+ * The security level for this context. This is new in OpenSSL 1.1.0 and
+ * always returns 0 if using older OpenSSL.
  */
 static VALUE
 ossl_sslctx_get_security_level(VALUE self)
@@ -972,7 +969,8 @@ ossl_sslctx_get_security_level(VALUE self)
  *    ctx.security_level = 0
  *    ctx.security_level = 5
  *
- * Sets the security level for this context (new in OpenSSL 1.1.0).
+ * Sets the security level for this context. This is new in OpenSSL 1.1.0 and
+ * no-op if using older OpenSSL.
  */
 static VALUE
 ossl_sslctx_set_security_level(VALUE self, VALUE v)
@@ -992,7 +990,7 @@ ossl_sslctx_set_security_level(VALUE self, VALUE v)
     return v;
 }
 
-#if defined(HAVE_SUPPORT_EC)
+#if !defined(OPENSSL_NO_EC)
 /*
  * call-seq:
  *    ctx.set_elliptic_curves("curve1:curve2:curve3") -> self
@@ -1695,7 +1693,7 @@ ossl_ssl_stop(VALUE self)
 	ossl_ssl_shutdown(ssl);
 	//SSL_free(ssl);
     }
-    DATA_PTR(self) = NULL;
+//    DATA_PTR(self) = NULL;
 
     return Qnil;
 }
@@ -2294,7 +2292,7 @@ Init_ossl_ssl(void)
     rb_define_method(cSSLContext, "ciphers=",    ossl_sslctx_set_ciphers, 1);
     rb_define_method(cSSLContext, "security_level", ossl_sslctx_get_security_level, 0);
     rb_define_method(cSSLContext, "security_level=", ossl_sslctx_set_security_level, 1);
-#if defined(HAVE_SUPPORT_EC)
+#if !defined(OPENSSL_NO_EC)
     rb_define_method(cSSLContext, "set_elliptic_curves", ossl_sslctx_set_elliptic_curves, 1);
 #endif
 

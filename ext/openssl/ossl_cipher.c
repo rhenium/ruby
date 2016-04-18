@@ -154,7 +154,6 @@ ossl_cipher_copy(VALUE self, VALUE other)
     return self;
 }
 
-#ifdef HAVE_OBJ_NAME_DO_ALL_SORTED
 static void*
 add_cipher_name_to_ary(const OBJ_NAME *name, VALUE ary)
 {
@@ -180,9 +179,6 @@ ossl_s_ciphers(VALUE self)
 
     return ary;
 }
-#else
-#define ossl_s_ciphers rb_f_notimplement
-#endif
 
 /*
  *  call-seq:
@@ -713,7 +709,6 @@ ossl_cipher_set_key_length(VALUE self, VALUE key_length)
     return key_length;
 }
 
-#if defined(HAVE_EVP_CIPHER_CTX_SET_PADDING)
 /*
  *  call-seq:
  *     cipher.padding = integer -> integer
@@ -735,9 +730,6 @@ ossl_cipher_set_padding(VALUE self, VALUE padding)
 	ossl_raise(eCipherError, NULL);
     return padding;
 }
-#else
-#define ossl_cipher_set_padding rb_f_notimplement
-#endif
 
 #define CIPHER_0ARG_INT(func)					\
     static VALUE						\
