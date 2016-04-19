@@ -188,6 +188,11 @@ int PEM_def_callback(char *buf, int num, int w, void *key);
 int ASN1_put_eoc(unsigned char **pp);
 #endif
 
+#if !defined(HAVE_SSL_CTX_CLEAR_OPTIONS)
+#  define SSL_CTX_clear_options(ctx, op) do \
+	(ctx)->options &= ~(op); while (0)
+#endif
+
 #if defined(__cplusplus)
 }
 #endif
