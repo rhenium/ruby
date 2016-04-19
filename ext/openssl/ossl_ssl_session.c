@@ -73,8 +73,8 @@ static VALUE ossl_ssl_session_initialize(VALUE self, VALUE arg1)
 	return self;
 }
 
-#if HAVE_SSL_SESSION_CMP == 0
-int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b)
+/* SSL_SESSION_cmp() was removed without a replacement in 1.0.0 */
+static int ossl_SSL_SESSION_cmp(const SSL_SESSION *a, const SSL_SESSION *b)
 {
     if (a->ssl_version != b->ssl_version ||
 	a->session_id_length != b->session_id_length)
@@ -85,7 +85,6 @@ int SSL_SESSION_cmp(const SSL_SESSION *a,const SSL_SESSION *b)
     return CRYPTO_memcmp(a->session_id, b->session_id, a->session_id_length);
 #endif
 }
-#endif
 
 /*
  * call-seq:
@@ -99,7 +98,7 @@ static VALUE ossl_ssl_session_eq(VALUE val1, VALUE val2)
 	GetSSLSession(val1, ctx1);
 	SafeGetSSLSession(val2, ctx2);
 
-	switch (SSL_SESSION_cmp(ctx1, ctx2)) {
+	switch (ossl_SSL_SESSION_cmp(ctx1, ctx2)) {
 	case 0:		return Qtrue;
 	default:	return Qfalse;
 	}
