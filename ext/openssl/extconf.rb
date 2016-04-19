@@ -60,61 +60,45 @@ unless OpenSSL.check_func("SSL_library_init()", "openssl/ssl.h")
 end
 
 Logging::message "=== Checking for OpenSSL features... ===\n"
-have_func("EVP_CIPHER_CTX_copy")
-have_func("HMAC_CTX_copy")
-have_func("PKCS5_PBKDF2_HMAC")
-have_func("RAND_egd")
-have_func("X509_NAME_hash_old")
-have_func("X509_STORE_get_ex_data")
-have_func("X509_STORE_set_ex_data")
-have_func("X509_REVOKED_dup")
-have_func("CRYPTO_memcmp")
+# compile options
 have_func("SSLv2_method")
-have_func("SSLv2_server_method")
-have_func("SSLv2_client_method")
 have_func("SSLv3_method")
-have_func("SSLv3_server_method")
-have_func("SSLv3_client_method")
 have_func("TLSv1_1_method")
-have_func("TLSv1_1_server_method")
-have_func("TLSv1_1_client_method")
 have_func("TLSv1_2_method")
-have_func("TLSv1_2_server_method")
-have_func("TLSv1_2_client_method")
-have_macro("SSL_CTX_clear_options", ["openssl/ssl.h"]) && $defs.push("-DHAVE_SSL_CTX_CLEAR_OPTIONS")
-have_func("SSL_CTX_set_alpn_select_cb")
-have_func("SSL_CTX_set_next_proto_select_cb")
-have_macro("SSL_get_server_tmp_key", ['openssl/ssl.h']) && $defs.push("-DHAVE_SSL_GET_SERVER_TMP_KEY")
-unless have_func("SSL_set_tlsext_host_name", ['openssl/ssl.h'])
-  have_macro("SSL_set_tlsext_host_name", ['openssl/ssl.h']) && $defs.push("-DHAVE_SSL_SET_TLSEXT_HOST_NAME")
-end
-
-have_func("ENGINE_load_builtin_engines")
-have_func("ENGINE_load_openbsd_dev_crypto")
-have_func("ENGINE_cleanup")
-have_func("ENGINE_load_dynamic")
-have_func("ENGINE_load_4758cca")
-have_func("ENGINE_load_aep")
-have_func("ENGINE_load_atalla")
-have_func("ENGINE_load_chil")
-have_func("ENGINE_load_cswift")
-have_func("ENGINE_load_nuron")
-have_func("ENGINE_load_sureware")
-have_func("ENGINE_load_ubsec")
-have_func("ENGINE_load_padlock")
-have_func("ENGINE_load_capi")
-have_func("ENGINE_load_gmp")
-have_func("ENGINE_load_gost")
-have_func("ENGINE_load_cryptodev")
-have_func("ENGINE_load_aesni")
-
-have_struct_member("CRYPTO_THREADID", "ptr", "openssl/crypto.h")
-have_struct_member("EVP_CIPHER_CTX", "flags", "openssl/evp.h")
-have_struct_member("EVP_CIPHER_CTX", "engine", "openssl/evp.h")
-have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
 have_macro("OPENSSL_FIPS", ['openssl/opensslconf.h']) && $defs.push("-DHAVE_OPENSSL_FIPS")
+have_func("RAND_egd")
+# ENGINE_load_xx is deprecated in OpenSSL 1.1.0 and become a macro
+engines = %w{builtin_engines openbsd_dev_crypto dynamic 4758cca aep atalla chil
+             cswift nuron sureware ubsec padlock capi gmp gost cryptodev aesni}
+engines.each { |name|
+  have_func("ENGINE_load_#{name}", ["openssl/engine.h"])
+}
+
+have_func("SSL_CTX_clear_options", ["openssl/ssl.h"])
+have_func("HMAC_CTX_copy")
+
+# added in 1.0.0
+have_func("EVP_CIPHER_CTX_copy")
+have_func("PKCS5_PBKDF2_HMAC")
+have_func("X509_NAME_hash_old")
+have_func("SSL_set_tlsext_host_name", ["openssl/ssl.h"])
+have_struct_member("CRYPTO_THREADID", "ptr", "openssl/crypto.h")
+
+# added in 1.0.1
+have_func("SSL_CTX_set_next_proto_select_cb")
 have_macro("EVP_CTRL_GCM_GET_TAG", ['openssl/evp.h']) && $defs.push("-DHAVE_AUTHENTICATED_ENCRYPTION")
 
+# added in 1.0.2
+have_func("CRYPTO_memcmp")
+have_func("X509_REVOKED_dup")
+have_func("SSL_CTX_set_alpn_select_cb")
+have_func("SSL_get_server_tmp_key", ["openssl/ssl.h"])
+
+# added in 1.1.0
+have_func("X509_STORE_get_ex_data")
+have_func("X509_STORE_set_ex_data")
+
+have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
 Logging::message "=== Checking done. ===\n"
 
 create_header

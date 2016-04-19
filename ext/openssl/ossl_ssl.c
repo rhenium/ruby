@@ -90,26 +90,22 @@ static const struct {
     OSSL_SSL_METHOD_ENTRY(TLSv1),
     OSSL_SSL_METHOD_ENTRY(TLSv1_server),
     OSSL_SSL_METHOD_ENTRY(TLSv1_client),
-#if defined(HAVE_TLSV1_2_METHOD) && defined(HAVE_TLSV1_2_SERVER_METHOD) && \
-        defined(HAVE_TLSV1_2_CLIENT_METHOD)
+#if defined(HAVE_TLSV1_2_METHOD)
     OSSL_SSL_METHOD_ENTRY(TLSv1_2),
     OSSL_SSL_METHOD_ENTRY(TLSv1_2_server),
     OSSL_SSL_METHOD_ENTRY(TLSv1_2_client),
 #endif
-#if defined(HAVE_TLSV1_1_METHOD) && defined(HAVE_TLSV1_1_SERVER_METHOD) && \
-        defined(HAVE_TLSV1_1_CLIENT_METHOD)
+#if defined(HAVE_TLSV1_1_METHOD)
     OSSL_SSL_METHOD_ENTRY(TLSv1_1),
     OSSL_SSL_METHOD_ENTRY(TLSv1_1_server),
     OSSL_SSL_METHOD_ENTRY(TLSv1_1_client),
 #endif
-#if defined(HAVE_SSLV2_METHOD) && defined(HAVE_SSLV2_SERVER_METHOD) && \
-        defined(HAVE_SSLV2_CLIENT_METHOD)
+#if defined(HAVE_SSLV2_METHOD)
     OSSL_SSL_METHOD_ENTRY(SSLv2),
     OSSL_SSL_METHOD_ENTRY(SSLv2_server),
     OSSL_SSL_METHOD_ENTRY(SSLv2_client),
 #endif
-#if defined(HAVE_SSLV3_METHOD) && defined(HAVE_SSLV3_SERVER_METHOD) && \
-        defined(HAVE_SSLV3_CLIENT_METHOD)
+#if defined(HAVE_SSLV3_METHOD)
     OSSL_SSL_METHOD_ENTRY(SSLv3),
     OSSL_SSL_METHOD_ENTRY(SSLv3_server),
     OSSL_SSL_METHOD_ENTRY(SSLv3_client),
