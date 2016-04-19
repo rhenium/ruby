@@ -338,3 +338,21 @@ ASN1_put_eoc(unsigned char **pp)
     return 2;
 }
 #endif
+
+#if !defined(HAVE_CRYPTO_MEMCMP)
+int
+CRYPTO_memcmp(const volatile void * volatile in_a,
+	      const volatile void * volatile in_b,
+	      size_t len)
+{
+    size_t i;
+    const volatile unsigned char *a = in_a;
+    const volatile unsigned char *b = in_b;
+    unsigned char x = 0;
+
+    for (i = 0; i < len; i++)
+	x |= a[i] ^ b[i];
+
+    return x;
+}
+#endif
