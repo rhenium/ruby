@@ -354,7 +354,7 @@ ossl_x509ext_set_value(VALUE self, VALUE data)
 	OPENSSL_free(s);
 	ossl_raise(eX509ExtError, NULL);
     }
-    if(!M_ASN1_OCTET_STRING_set(asn1s, s, RSTRING_LENINT(data))){
+    if(!ASN1_OCTET_STRING_set(asn1s, (unsigned char *)s, RSTRING_LENINT(data))){
 	OPENSSL_free(s);
 	ASN1_OCTET_STRING_free(asn1s);
 	ossl_raise(eX509ExtError, NULL);
@@ -411,7 +411,7 @@ ossl_x509ext_get_value(VALUE obj)
     if (!(out = BIO_new(BIO_s_mem())))
 	ossl_raise(eX509ExtError, NULL);
     if (!X509V3_EXT_print(out, ext, 0, 0))
-	M_ASN1_OCTET_STRING_print(out, ext->value);
+	ASN1_STRING_print(out, (ASN1_STRING *)X509_EXTENSION_get_data(ext));
     ret = ossl_membio2str(out);
 
     return ret;
