@@ -2351,25 +2351,17 @@ Init_ossl_ssl(void)
     ossl_ssl_def_const(OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG);
     ossl_ssl_def_const(OP_SSLREF2_REUSE_CERT_TYPE_BUG);
     ossl_ssl_def_const(OP_MICROSOFT_BIG_SSLV3_BUFFER);
-#if defined(SSL_OP_MSIE_SSLV2_RSA_PADDING)
     ossl_ssl_def_const(OP_MSIE_SSLV2_RSA_PADDING);
-#endif
     ossl_ssl_def_const(OP_SSLEAY_080_CLIENT_DH_BUG);
     ossl_ssl_def_const(OP_TLS_D5_BUG);
     ossl_ssl_def_const(OP_TLS_BLOCK_PADDING_BUG);
     ossl_ssl_def_const(OP_DONT_INSERT_EMPTY_FRAGMENTS);
     ossl_ssl_def_const(OP_ALL);
-#if defined(SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION)
     ossl_ssl_def_const(OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-#endif
-#if defined(SSL_OP_SINGLE_ECDH_USE)
     ossl_ssl_def_const(OP_SINGLE_ECDH_USE);
-#endif
     ossl_ssl_def_const(OP_SINGLE_DH_USE);
     ossl_ssl_def_const(OP_EPHEMERAL_RSA);
-#if defined(SSL_OP_CIPHER_SERVER_PREFERENCE)
     ossl_ssl_def_const(OP_CIPHER_SERVER_PREFERENCE);
-#endif
     ossl_ssl_def_const(OP_TLS_ROLLBACK_BUG);
     ossl_ssl_def_const(OP_NO_SSLv2);
     ossl_ssl_def_const(OP_NO_SSLv3);

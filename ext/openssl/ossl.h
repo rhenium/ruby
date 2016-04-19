@@ -31,11 +31,6 @@ extern "C" {
 #include <ruby/io.h>
 #include <ruby/thread.h>
 
-/*
- * Check the OpenSSL version
- * The only supported are:
- * 	OpenSSL >= 0.9.7
- */
 #include <openssl/opensslv.h>
 
 #ifdef HAVE_ASSERT_H
@@ -46,7 +41,6 @@ extern "C" {
 
 #if defined(_WIN32) && !defined(LIBRESSL_VERSION_NUMBER)
 #  include <openssl/e_os2.h>
-#  define OSSL_NO_CONF_API 1
 #  if !defined(OPENSSL_SYS_WIN32)
 #    define OPENSSL_SYS_WIN32 1
 #  endif
@@ -63,18 +57,12 @@ extern "C" {
 #include <openssl/rand.h>
 #include <openssl/conf.h>
 #include <openssl/conf_api.h>
+#include <openssl/ocsp.h>
 #if !defined(_WIN32)
 #  include <openssl/crypto.h>
 #endif
-#undef X509_NAME
-#undef PKCS7_SIGNER_INFO
-#if defined(HAVE_OPENSSL_ENGINE_H) && defined(HAVE_EVP_CIPHER_CTX_ENGINE)
-#  define OSSL_ENGINE_ENABLED
+#if !defined(OPENSSL_NO_ENGINE)
 #  include <openssl/engine.h>
-#endif
-#if defined(HAVE_OPENSSL_OCSP_H)
-#  define OSSL_OCSP_ENABLED
-#  include <openssl/ocsp.h>
 #endif
 
 /* OpenSSL requires passwords for PEM-encoded files to be at least four
@@ -114,13 +102,6 @@ extern VALUE eOSSLError;
     ossl_raise(rb_eTypeError, "wrong argument type");\
   }\
 } while (0)
-
-/*
- * Compatibility
- */
-#if OPENSSL_VERSION_NUMBER >= 0x10000000L
-#define STACK _STACK
-#endif
 
 /*
  * String to HEXString conversion

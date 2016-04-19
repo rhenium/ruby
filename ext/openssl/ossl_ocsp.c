@@ -10,8 +10,6 @@
  */
 #include "ossl.h"
 
-#if defined(OSSL_OCSP_ENABLED)
-
 #define NewOCSPReq(klass) \
     TypedData_Wrap_Struct((klass), &ossl_ocsp_request_type, 0)
 #define SetOCSPReq(obj, req) do { \
@@ -1249,10 +1247,3 @@ Init_ossl_ocsp(void)
     /* The responder ID is based on the public key. */
     rb_define_const(mOCSP, "V_RESPID_KEY", INT2NUM(V_OCSP_RESPID_KEY));
 }
-
-#else /* ! OSSL_OCSP_ENABLED */
-void
-Init_ossl_ocsp(void)
-{
-}
-#endif
