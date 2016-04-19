@@ -7,8 +7,6 @@
  * This program is licensed under the same licence as Ruby.
  * (See the file 'LICENCE'.)
  */
-#if !defined(OPENSSL_NO_HMAC)
-
 #include "ossl.h"
 
 #define MakeHMAC(obj, klass, ctx) \
@@ -360,12 +358,3 @@ Init_ossl_hmac(void)
     rb_define_alias(cHMAC, "inspect", "hexdigest");
     rb_define_alias(cHMAC, "to_s", "hexdigest");
 }
-
-#else /* NO_HMAC */
-#  warning >>> OpenSSL is compiled without HMAC support <<<
-void
-Init_ossl_hmac(void)
-{
-    rb_warning("HMAC is not available: OpenSSL is compiled without HMAC.");
-}
-#endif /* NO_HMAC */
