@@ -37,6 +37,14 @@ int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in);
 int HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #endif
 
+#if !defined(HAVE_X509_STORE_CTX_GET0_CURRENT_CRL)
+#  define X509_STORE_CTX_get0_current_crl(x) ((x)->current_crl)
+#endif
+
+#if !defined(HAVE_X509_STORE_SET_VERIFY_CB)
+#  define X509_STORE_set_verify_cb X509_STORE_set_verify_cb_func
+#endif
+
 /*** added in 1.0.1 ***/
 /*** added in 1.0.2 ***/
 #if !defined(HAVE_CRYPTO_MEMCMP)
@@ -79,6 +87,38 @@ void *X509_STORE_get_ex_data(X509_STORE *str, int idx);
 
 #if !defined(HAVE_X509_STORE_SET_EX_DATA)
 int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data);
+#endif
+
+#if !defined(HAVE_X509_CRL_GET0_SIGNATURE)
+void X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_CRL *crl);
+#endif
+
+#if !defined(HAVE_X509_REQ_GET0_SIGNATURE)
+void X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ *req);
+#endif
+
+#if !defined(HAVE_X509_REVOKED_GET0_SERIALNUMBER)
+#  define X509_REVOKED_get0_serialNumber(x) ((x)->serialNumber)
+#endif
+
+#if !defined(HAVE_X509_REVOKED_GET0_REVOCATIONDATE)
+#  define X509_REVOKED_get0_revocationDate(x) ((x)->revocationDate)
+#endif
+
+#if !defined(HAVE_X509_GET0_TBS_SIGALG)
+#  define X509_get0_tbs_sigalg(x) ((x)->cert_info->signature)
+#endif
+
+#if !defined(HAVE_X509_STORE_CTX_GET0_UNTRUSTED)
+#  define X509_STORE_CTX_get0_untrusted(x) ((x)->untrusted)
+#endif
+
+#if !defined(HAVE_X509_STORE_CTX_GET0_CERT)
+#  define X509_STORE_CTX_get0_cert(x) ((x)->cert)
+#endif
+
+#if !defined(HAVE_X509_STORE_CTX_GET0_CHAIN)
+#  define X509_STORE_CTX_get0_chain(ctx) X509_STORE_CTX_get_chain(ctx)
 #endif
 
 #if !defined(HAVE_OCSP_SINGLERESP_GET0_ID)
