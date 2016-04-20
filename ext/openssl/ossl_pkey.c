@@ -271,21 +271,22 @@ static VALUE
 ossl_pkey_sign(VALUE self, VALUE digest, VALUE data)
 {
     EVP_PKEY *pkey;
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     unsigned int buf_len;
     VALUE str;
     int result;
 
-    if (rb_funcallv(self, id_private_q, 0, NULL) != Qtrue) {
+    if (rb_funcallv(self, id_private_q, 0, NULL) != Qtrue)
 	ossl_raise(rb_eArgError, "Private key is needed.");
-    }
+    if (!ctx)
+	ossl_raise(rb_eRuntimeError, "EVP_MD_CTX_new() failed");
     GetPKey(self, pkey);
-    EVP_SignInit(&ctx, GetDigestPtr(digest));
+    EVP_SignInit(ctx, GetDigestPtr(digest));
     StringValue(data);
-    EVP_SignUpdate(&ctx, RSTRING_PTR(data), RSTRING_LEN(data));
+    EVP_SignUpdate(ctx, RSTRING_PTR(data), RSTRING_LEN(data));
     str = rb_str_new(0, EVP_PKEY_size(pkey)+16);
-    result = EVP_SignFinal(&ctx, (unsigned char *)RSTRING_PTR(str), &buf_len, pkey);
-    EVP_MD_CTX_cleanup(&ctx);
+    result = EVP_SignFinal(ctx, (unsigned char *)RSTRING_PTR(str), &buf_len, pkey);
+    EVP_MD_CTX_free(ctx);
     if (!result)
 	ossl_raise(ePKeyError, NULL);
     assert((long)buf_len <= RSTRING_LEN(str));
@@ -319,16 +320,18 @@ static VALUE
 ossl_pkey_verify(VALUE self, VALUE digest, VALUE sig, VALUE data)
 {
     EVP_PKEY *pkey;
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     int result;
 
+    if (!ctx)
+	ossl_raise(rb_eRuntimeError, "EVP_MD_CTX_new() failed");
     GetPKey(self, pkey);
     StringValue(sig);
     StringValue(data);
-    EVP_VerifyInit(&ctx, GetDigestPtr(digest));
-    EVP_VerifyUpdate(&ctx, RSTRING_PTR(data), RSTRING_LEN(data));
-    result = EVP_VerifyFinal(&ctx, (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), pkey);
-    EVP_MD_CTX_cleanup(&ctx);
+    EVP_VerifyInit(ctx, GetDigestPtr(digest));
+    EVP_VerifyUpdate(ctx, RSTRING_PTR(data), RSTRING_LEN(data));
+    result = EVP_VerifyFinal(ctx, (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), pkey);
+    EVP_MD_CTX_free(ctx);
     switch (result) {
     case 0:
 	return Qfalse;

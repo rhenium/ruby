@@ -106,6 +106,8 @@ have_struct_member("SSL", "ctx", "openssl/ssl.h") || $defs.push("-DHAVE_OPAQUE_O
 have_func("BN_GENCB_new")
 have_func("BN_GENCB_free")
 have_func("BN_GENCB_get_arg")
+have_func("EVP_MD_CTX_new")
+have_func("EVP_MD_CTX_free")
 have_func("HMAC_CTX_new")
 have_func("HMAC_CTX_free")
 have_func("HMAC_CTX_reset")

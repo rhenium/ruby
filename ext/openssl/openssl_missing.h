@@ -73,6 +73,14 @@ int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * vol
 #  define BN_GENCB_get_arg(cb) (cb)->arg
 #endif
 
+#if !defined(HAVE_EVP_MD_CTX_NEW)
+#  define EVP_MD_CTX_new EVP_MD_CTX_create
+#endif
+
+#if !defined(HAVE_EVP_MD_CTX_FREE)
+#  define EVP_MD_CTX_free EVP_MD_CTX_destroy
+#endif
+
 #if !defined(HAVE_HMAC_CTX_NEW)
 HMAC_CTX *HMAC_CTX_new(void);
 #endif
