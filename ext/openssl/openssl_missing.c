@@ -41,19 +41,6 @@ EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx)
 #endif
 
 /*** added in 1.0.0 ***/
-#if !defined(HAVE_HMAC_CTX_COPY)
-void
-HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
-{
-    if (!out || !in) return;
-    memcpy(out, in, sizeof(HMAC_CTX));
-
-    EVP_MD_CTX_copy(&out->md_ctx, &in->md_ctx);
-    EVP_MD_CTX_copy(&out->i_ctx, &in->i_ctx);
-    EVP_MD_CTX_copy(&out->o_ctx, &in->o_ctx);
-}
-#endif /* HAVE_HMAC_CTX_COPY */
-
 #if !defined(HAVE_EVP_CIPHER_CTX_COPY)
 /*
  * this function does not exist in OpenSSL yet... or ever?.
@@ -77,20 +64,22 @@ EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in)
 }
 #endif
 
-#if !defined(HAVE_X509_STORE_SET_EX_DATA)
-int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data)
+#if !defined(HAVE_HMAC_CTX_COPY)
+void
+HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
 {
-    return CRYPTO_set_ex_data(&str->ex_data, idx, data);
+    if (!out || !in) return;
+    memcpy(out, in, sizeof(HMAC_CTX));
+
+    EVP_MD_CTX_copy(&out->md_ctx, &in->md_ctx);
+    EVP_MD_CTX_copy(&out->i_ctx, &in->i_ctx);
+    EVP_MD_CTX_copy(&out->o_ctx, &in->o_ctx);
 }
 #endif
 
-#if !defined(HAVE_X509_STORE_GET_EX_DATA)
-void *X509_STORE_get_ex_data(X509_STORE *str, int idx)
-{
-    return CRYPTO_get_ex_data(&str->ex_data, idx);
-}
-#endif
+/*** added in 1.0.1 ***/
 
+/*** added in 1.0.2 ***/
 #if !defined(HAVE_CRYPTO_MEMCMP)
 int
 CRYPTO_memcmp(const volatile void * volatile in_a,
@@ -106,5 +95,50 @@ CRYPTO_memcmp(const volatile void * volatile in_a,
 	x |= a[i] ^ b[i];
 
     return x;
+}
+#endif
+
+/*** added in 1.1.0 ***/
+#if !defined(HAVE_HMAC_CTX_NEW)
+HMAC_CTX *
+HMAC_CTX_new(void)
+{
+    HMAC_CTX *ctx = OPENSSL_malloc(sizeof(HMAC_CTX));
+    HMAC_CTX_reset(ctx);
+    if (!ctx)
+	return NULL;
+    return ctx;
+}
+#endif
+
+#if !defined(HAVE_HMAC_CTX_FREE)
+void
+HMAC_CTX_free(HMAC_CTX *ctx)
+{
+    HMAC_CTX_cleanup(ctx);
+    OPENSSL_free(ctx);
+}
+#endif
+
+#if !defined(HAVE_HMAC_CTX_RESET)
+int
+HMAC_CTX_reset(HMAC_CTX *ctx)
+{
+    HMAC_CTX_init(ctx);
+    return 0;
+}
+#endif
+
+#if !defined(HAVE_X509_STORE_SET_EX_DATA)
+int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data)
+{
+    return CRYPTO_set_ex_data(&str->ex_data, idx, data);
+}
+#endif
+
+#if !defined(HAVE_X509_STORE_GET_EX_DATA)
+void *X509_STORE_get_ex_data(X509_STORE *str, int idx)
+{
+    return CRYPTO_get_ex_data(&str->ex_data, idx);
 }
 #endif

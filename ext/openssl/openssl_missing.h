@@ -29,12 +29,36 @@ void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx);
 #endif
 
 /*** added in 1.0.0 ***/
+#if !defined(HAVE_EVP_CIPHER_CTX_COPY)
+int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in);
+#endif
+
 #if !defined(HAVE_HMAC_CTX_COPY)
 void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #endif
 
-#if !defined(HAVE_EVP_CIPHER_CTX_COPY)
-int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in);
+/*** added in 1.0.1 ***/
+/*** added in 1.0.2 ***/
+#if !defined(HAVE_CRYPTO_MEMCMP)
+int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * volatile in_b, size_t len);
+#endif
+
+#if !defined(HAVE_X509_REVOKED_DUP)
+# define X509_REVOKED_dup(rev) (X509_REVOKED *)ASN1_dup((i2d_of_void *)i2d_X509_REVOKED, \
+	(d2i_of_void *)d2i_X509_REVOKED, (char *)(rev))
+#endif
+
+/*** added in 1.1.0 ***/
+#if !defined(HAVE_HMAC_CTX_NEW)
+HMAC_CTX *HMAC_CTX_new(void);
+#endif
+
+#if !defined(HAVE_HMAC_CTX_FREE)
+void HMAC_CTX_free(HMAC_CTX *ctx);
+#endif
+
+#if !defined(HAVE_HMAC_CTX_RESET)
+int HMAC_CTX_reset(HMAC_CTX *ctx);
 #endif
 
 #if !defined(HAVE_X509_STORE_GET_EX_DATA)
@@ -43,15 +67,6 @@ void *X509_STORE_get_ex_data(X509_STORE *str, int idx);
 
 #if !defined(HAVE_X509_STORE_SET_EX_DATA)
 int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data);
-#endif
-
-#if !defined(HAVE_CRYPTO_MEMCMP)
-int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * volatile in_b, size_t len);
-#endif
-
-#if !defined(HAVE_X509_REVOKED_DUP)
-# define X509_REVOKED_dup(rev) (X509_REVOKED *)ASN1_dup((i2d_of_void *)i2d_X509_REVOKED, \
-	(d2i_of_void *)d2i_X509_REVOKED, (char *)(rev))
 #endif
 
 #if defined(__cplusplus)

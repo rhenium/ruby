@@ -78,10 +78,10 @@ engines.each { |name|
 have_func("EVP_CIPHER_CTX_new")
 have_func("EVP_CIPHER_CTX_free")
 have_func("SSL_CTX_clear_options", ["openssl/ssl.h"])
-have_func("HMAC_CTX_copy")
 
 # added in 1.0.0
 have_func("EVP_CIPHER_CTX_copy")
+have_func("HMAC_CTX_copy")
 have_func("PKCS5_PBKDF2_HMAC")
 have_func("X509_NAME_hash_old")
 have_func("SSL_set_tlsext_host_name", ["openssl/ssl.h"])
@@ -98,6 +98,9 @@ have_func("SSL_CTX_set_alpn_select_cb")
 have_func("SSL_get_server_tmp_key", ["openssl/ssl.h"])
 
 # added in 1.1.0
+have_func("HMAC_CTX_new")
+have_func("HMAC_CTX_free")
+have_func("HMAC_CTX_reset")
 have_func("RAND_pseudo_bytes", ["openssl/rand.h"], "-Werror=deprecated-declarations")
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
