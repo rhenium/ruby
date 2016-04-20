@@ -27,7 +27,7 @@ ossl_generate_cb_2(int p, int n, BN_GENCB *cb)
     struct ossl_generate_cb_arg *arg;
     int state;
 
-    arg = (struct ossl_generate_cb_arg *)cb->arg;
+    arg = (struct ossl_generate_cb_arg *)BN_GENCB_get_arg(cb);
     if (arg->yield) {
 	ary = rb_ary_new2(2);
 	rb_ary_store(ary, 0, INT2NUM(p));

@@ -98,15 +98,19 @@ dsa_blocking_gen(void *arg)
 static DSA *
 dsa_generate(int size)
 {
-    BN_GENCB cb;
     struct ossl_generate_cb_arg cb_arg;
     struct dsa_blocking_gen_arg gen_arg;
     DSA *dsa = DSA_new();
+    BN_GENCB *cb = BN_GENCB_new();
     unsigned char seed[20];
     int seed_len = 20, counter;
     unsigned long h;
 
-    if (!dsa) return 0;
+    if (!dsa || !cb) {
+	if (dsa) DSA_free(dsa);
+	if (cb) BN_GENCB_free(cb);
+	return 0;
+    }
     if (RAND_bytes(seed, seed_len) <= 0) {
 	DSA_free(dsa);
 	return 0;
@@ -115,14 +119,14 @@ dsa_generate(int size)
     memset(&cb_arg, 0, sizeof(struct ossl_generate_cb_arg));
     if (rb_block_given_p())
 	cb_arg.yield = 1;
-    BN_GENCB_set(&cb, ossl_generate_cb_2, &cb_arg);
+    BN_GENCB_set(cb, ossl_generate_cb_2, &cb_arg);
     gen_arg.dsa = dsa;
     gen_arg.size = size;
     gen_arg.seed = seed;
     gen_arg.seed_len = seed_len;
     gen_arg.counter = &counter;
     gen_arg.h = &h;
-    gen_arg.cb = &cb;
+    gen_arg.cb = cb;
     if (cb_arg.yield == 1) {
 	/* we cannot release GVL when callback proc is supplied */
 	dsa_blocking_gen(&gen_arg);
@@ -130,6 +134,8 @@ dsa_generate(int size)
 	/* there's a chance to unblock */
 	rb_thread_call_without_gvl(dsa_blocking_gen, &gen_arg, ossl_generate_cb_stop, &cb_arg);
     }
+
+    BN_GENCB_free(cb);
     if (!gen_arg.result) {
 	DSA_free(dsa);
 	if (cb_arg.state) rb_jump_tag(cb_arg.state);
