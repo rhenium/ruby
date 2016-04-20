@@ -74,6 +74,9 @@ engines.each { |name|
   have_func("ENGINE_load_#{name}", ["openssl/engine.h"])
 }
 
+# added in 0.9.8X
+have_func("EVP_CIPHER_CTX_new")
+have_func("EVP_CIPHER_CTX_free")
 have_func("SSL_CTX_clear_options", ["openssl/ssl.h"])
 have_func("HMAC_CTX_copy")
 

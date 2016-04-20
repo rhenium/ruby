@@ -18,6 +18,29 @@
 
 #include "openssl_missing.h"
 
+/*** added in 0.9.8X ***/
+#if !defined(HAVE_EVP_CIPHER_CTX_NEW)
+EVP_CIPHER_CTX *
+EVP_CIPHER_CTX_new(void)
+{
+    EVP_CIPHER_CTX *ctx = OPENSSL_malloc(sizeof(EVP_CIPHER_CTX));
+    if (!ctx)
+	return NULL;
+    EVP_CIPHER_CTX_init(ctx);
+    return ctx;
+}
+#endif
+
+#if !defined(HAVE_EVP_CIPHER_CTX_FREE)
+void
+EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx)
+{
+    EVP_CIPHER_CTX_cleanup(ctx);
+    OPENSSL_free(ctx);
+}
+#endif
+
+/*** added in 1.0.0 ***/
 #if !defined(HAVE_HMAC_CTX_COPY)
 void
 HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)

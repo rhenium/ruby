@@ -14,6 +14,21 @@
 extern "C" {
 #endif
 
+/*** added in 0.9.8X ***/
+#if !defined(HAVE_EVP_CIPHER_CTX_NEW)
+EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void);
+#endif
+
+#if !defined(HAVE_EVP_CIPHER_CTX_FREE)
+void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx);
+#endif
+
+#if !defined(HAVE_SSL_CTX_CLEAR_OPTIONS)
+# define SSL_CTX_clear_options(ctx, op) do \
+	(ctx)->options &= ~(op); while (0)
+#endif
+
+/*** added in 1.0.0 ***/
 #if !defined(HAVE_HMAC_CTX_COPY)
 void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #endif
@@ -32,11 +47,6 @@ int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data);
 
 #if !defined(HAVE_CRYPTO_MEMCMP)
 int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * volatile in_b, size_t len);
-#endif
-
-#if !defined(HAVE_SSL_CTX_CLEAR_OPTIONS)
-# define SSL_CTX_clear_options(ctx, op) do \
-	(ctx)->options &= ~(op); while (0)
 #endif
 
 #if !defined(HAVE_X509_REVOKED_DUP)
