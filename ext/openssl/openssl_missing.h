@@ -56,6 +56,10 @@ int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * vol
 	(d2i_of_void *)d2i_X509_REVOKED, (char *)(rev))
 #endif
 
+#if !defined(HAVE_X509_STORE_CTX_GET0_STORE)
+#  define X509_STORE_CTX_get0_store(x) ((x)->ctx)
+#endif
+
 /*** added in 1.1.0 ***/
 #if !defined(HAVE_BN_GENCB_NEW)
 #  define BN_GENCB_new() ((BN_GENCB *)OPENSSL_malloc(sizeof(BN_GENCB)))
