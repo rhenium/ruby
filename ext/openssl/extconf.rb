@@ -104,6 +104,7 @@ have_func("HMAC_CTX_reset")
 have_func("RAND_pseudo_bytes", ["openssl/rand.h"], "-Werror=deprecated-declarations")
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
+have_func("OCSP_SINGLERESP_get0_id")
 
 have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
 Logging::message "=== Checking done. ===\n"

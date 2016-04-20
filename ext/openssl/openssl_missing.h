@@ -69,6 +69,10 @@ void *X509_STORE_get_ex_data(X509_STORE *str, int idx);
 int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data);
 #endif
 
+#if !defined(HAVE_OCSP_SINGLERESP_GET0_ID)
+#  define OCSP_SINGLERESP_get0_id(s) ((s)->certId)
+#endif
+
 #if defined(__cplusplus)
 }
 #endif
