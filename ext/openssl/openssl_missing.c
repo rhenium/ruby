@@ -65,15 +65,16 @@ EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in)
 #endif
 
 #if !defined(HAVE_HMAC_CTX_COPY)
-void
+int
 HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
 {
-    if (!out || !in) return;
     memcpy(out, in, sizeof(HMAC_CTX));
 
     EVP_MD_CTX_copy(&out->md_ctx, &in->md_ctx);
     EVP_MD_CTX_copy(&out->i_ctx, &in->i_ctx);
     EVP_MD_CTX_copy(&out->o_ctx, &in->o_ctx);
+
+    return 1;
 }
 #endif
 

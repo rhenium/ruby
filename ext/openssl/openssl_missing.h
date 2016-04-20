@@ -34,7 +34,7 @@ int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in);
 #endif
 
 #if !defined(HAVE_HMAC_CTX_COPY)
-void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
+int HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #endif
 
 /*** added in 1.0.1 ***/
