@@ -110,6 +110,11 @@ have_func("RAND_pseudo_bytes", ["openssl/rand.h"], "-Werror=deprecated-declarati
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
 have_func("OCSP_SINGLERESP_get0_id")
+have_func("X509_up_ref")
+have_func("X509_CRL_up_ref")
+have_func("X509_STORE_up_ref")
+have_func("SSL_SESSION_up_ref")
+have_func("EVP_PKEY_up_ref")
 
 have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
 Logging::message "=== Checking done. ===\n"
