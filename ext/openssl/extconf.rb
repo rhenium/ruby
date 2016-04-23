@@ -104,6 +104,7 @@ have_func("CRYPTO_memcmp")
 have_func("EC_curve_nist2nid")
 have_func("X509_REVOKED_dup")
 have_func("X509_STORE_CTX_get0_store")
+have_func("SSL_is_server");
 have_func("SSL_CTX_set_alpn_select_cb")
 have_func_like("SSL_CTX_set1_curves_list", "openssl/ssl.h")
 have_func_like("SSL_CTX_set_ecdh_auto", "openssl/ssl.h")

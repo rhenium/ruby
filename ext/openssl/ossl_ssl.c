@@ -654,10 +654,9 @@ ssl_alpn_select_cb(SSL *ssl, const unsigned char **out, unsigned char *outlen, c
 static void
 ssl_info_cb(const SSL *ssl, int where, int val)
 {
-    int state = SSL_get_state(ssl);
+    int is_server = SSL_is_server((SSL *)ssl);
 
-    if ((where & SSL_CB_HANDSHAKE_START) &&
-	(state & SSL_ST_ACCEPT)) {
+    if (is_server && (where & SSL_CB_HANDSHAKE_START)) {
 	ssl_renegotiation_cb(ssl);
     }
 }
