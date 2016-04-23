@@ -108,7 +108,17 @@ ossl_cipher_initialize(VALUE self, VALUE str)
     EVP_CIPHER_CTX *ctx;
     const EVP_CIPHER *cipher;
     char *name;
-    unsigned char key[EVP_MAX_KEY_LENGTH];
+    /*
+     * EVP_CipherInit_ex() allows to specify NULL to key and iv, however some
+     * ciphers unfortunately don't handle well. [Bug #2768]
+     *
+     * The EVP which has EVP_CIPH_RAND_KEY flag (such as DES3) allows
+     * uninitialized key, but other EVPs (such as AES) does not allow it.
+     * Calling EVP_CipherUpdate() without initializing key causes SEGV so we
+     * set the data filled with '\0' as the key by default.
+     */
+    unsigned char dummy_key[EVP_MAX_KEY_LENGTH] = { 0 };
+    unsigned char dummy_iv[EVP_MAX_IV_LENGTH] = { 0 };
 
     name = StringValuePtr(str);
     GetCipherInit(self, ctx);
@@ -119,14 +129,8 @@ ossl_cipher_initialize(VALUE self, VALUE str)
     if (!(cipher = EVP_get_cipherbyname(name))) {
 	ossl_raise(rb_eRuntimeError, "unsupported cipher algorithm (%s)", name);
     }
-    /*
-     * The EVP which has EVP_CIPH_RAND_KEY flag (such as DES3) allows
-     * uninitialized key, but other EVPs (such as AES) does not allow it.
-     * Calling EVP_CipherUpdate() without initializing key causes SEGV so we
-     * set the data filled with "\0" as the key by default.
-     */
-    memset(key, 0, EVP_MAX_KEY_LENGTH);
-    if (EVP_CipherInit_ex(ctx, cipher, NULL, key, NULL, -1) != 1)
+
+    if (EVP_CipherInit_ex(ctx, cipher, NULL, dummy_key, dummy_iv, -1) != 1)
 	ossl_raise(eCipherError, NULL);
 
     return self;
