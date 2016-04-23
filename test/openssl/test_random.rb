@@ -11,6 +11,7 @@ class OpenSSL::TestRandom < Test::Unit::TestCase
   end
 
   def test_pseudo_bytes
+    return unless defined?(OpenSSL::Random.pseudo_bytes)
     assert_equal("", OpenSSL::Random.pseudo_bytes(0))
     assert_equal(12, OpenSSL::Random.pseudo_bytes(12).bytesize)
   end

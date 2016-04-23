@@ -40,7 +40,7 @@ class OpenSSL::TestPKeyDSA < Test::Unit::TestCase
 
   def test_sign_verify
     check_sign_verify(OpenSSL::Digest::DSS1.new)
-  end
+  end if defined?(OpenSSL::Digest::DSS1)
 
 if (OpenSSL::OPENSSL_VERSION_NUMBER > 0x10000000)
   def test_sign_verify_sha1
@@ -62,7 +62,7 @@ end
     digest1 << 'Change state of digest1'
     assert(key.verify(digest1, sig, data))
     assert(key.verify(digest2, sig, data))
-  end
+  end if defined?(OpenSSL::Digest::DSS1)
 
   def test_read_DSA_PUBKEY
     p = 7188211954100152441468596248707152960171255279130004340103875772401008316444412091945435731597638374542374929457672178957081124632837356913990200866056699
