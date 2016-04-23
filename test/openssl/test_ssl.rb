@@ -405,7 +405,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
       ciphers = ctx.ciphers
       ciphers_versions = ciphers.collect{|_, v, _, _| v }
       ciphers_names = ciphers.collect{|v, _, _, _| v }
-      assert(ciphers_names.all?{|v| /ADH/ !~ v })
+      assert(ciphers_names.all?{|v| /A(EC)?DH/ !~ v })
       assert(ciphers_versions.all?{|v| /SSLv2/ !~ v })
       ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
       ssl.sync_close = true
