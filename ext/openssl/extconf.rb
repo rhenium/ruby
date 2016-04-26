@@ -98,6 +98,7 @@ have_func("SSL_CTX_set_alpn_select_cb")
 have_func("SSL_get_server_tmp_key", ["openssl/ssl.h"])
 
 # added in 1.1.0
+have_struct_member("SSL", "ctx", "openssl/ssl.h") || $defs.push("-DHAVE_OPAQUE_OPENSSL")
 have_func("BN_GENCB_new")
 have_func("BN_GENCB_free")
 have_func("BN_GENCB_get_arg")
