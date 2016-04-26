@@ -273,6 +273,7 @@ AQjjxMXhwULlmuR/K+WwlaZPiLIBYalLAZQ7ZbOPeVkJ8ePao0eLAgEC
         store.purpose = OpenSSL::X509::PURPOSE_SSL_CLIENT
         ctx = OpenSSL::SSL::SSLContext.new
         ctx.ciphers = "ADH-AES256-GCM-SHA384" if use_anon_cipher
+        ctx.security_level = 0 if use_anon_cipher
         ctx.cert_store = store
         #ctx.extra_chain_cert = [ ca_cert ]
         ctx.cert = @svr_cert
