@@ -55,6 +55,12 @@ int HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * volatile in_b, size_t len);
 #endif
 
+#if !defined(OPENSSL_NO_EC)
+#if !defined(HAVE_EC_CURVE_NIST2NID)
+int EC_curve_nist2nid(const char *str);
+#endif
+#endif
+
 #if !defined(HAVE_X509_REVOKED_DUP)
 # define X509_REVOKED_dup(rev) (X509_REVOKED *)ASN1_dup((i2d_of_void *)i2d_X509_REVOKED, \
 	(d2i_of_void *)d2i_X509_REVOKED, (char *)(rev))

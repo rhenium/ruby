@@ -271,7 +271,11 @@ ossl_tmp_dh_callback(SSL *ssl, int is_export, int keylength)
 }
 #endif /* OPENSSL_NO_DH */
 
-#if !defined(OPENSSL_NO_EC)
+#if !defined(OPENSSL_NO_EC) && defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
+/*
+ * SSL_CTX_set_tmp_ecdh_callback() is removed in OpenSSL 1.1.0. User should use
+ * SSLContext#set_ecdh_curves instead.
+ */
 static VALUE
 ossl_call_tmp_ecdh_callback(VALUE args)
 {
@@ -719,10 +723,29 @@ ossl_sslctx_setup(VALUE self)
 #endif
 
 #if !defined(OPENSSL_NO_EC)
-    if (RTEST(ossl_sslctx_get_tmp_ecdh_cb(self))){
-	SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
-    }
+    /*
+     * OpenSSL will use ECDH:
+     * 0.9.8-1.0.1: if a curve (or tmp_ecdh callback) is explicitly set
+     * 1.0.2:       if SSL_CTX_set_ecdh_auto() is called
+     * 1.1.0:       always
+     */
+#if defined(HAVE_SSL_CTX_SET_ECDH_AUTO)
+    /* 1.0.2 / LibreSSL 2.3 case: enable it */
+    if (!SSL_CTX_set_ecdh_auto(ctx, 1))
+	ossl_raise(eSSLError, "SSL_CTX_set_ecdh_auto");
+#else
+    /* -1.0.1 case: enable if SSLContext#set_ecdh_curves is called */
+    /* 1.1.0 case: enable always; nothing to do */
 #endif
+    /* for compatibility */
+    if (RTEST(ossl_sslctx_get_tmp_ecdh_cb(self))){
+	rb_warn("tmp_ecdh_callback is deprecated and will not work with recent "
+		"OpenSSL; use SSLContext#set_ecdh_curves() instead.");
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
+	SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
+#endif
+    }
+#endif /* OPENSSL_NO_EC */
 
     val = ossl_sslctx_get_cert_store(self);
     if(!NIL_P(val)){
@@ -1017,6 +1040,64 @@ ossl_sslctx_set_security_level(VALUE self, VALUE v)
 
     return v;
 }
+
+#if !defined(OPENSSL_NO_EC)
+/*
+ * call-seq:
+ *    ctx.set_ecdh_curves("curve1:curve2:curve3") -> self
+ *
+ * Sets the list of supported elliptic curves for this context. The curves are
+ * passed as a string, colon separated list of named curves in preference order.
+ * For example "P-521:P-384:P-256".
+ *
+ * If you are using an newer OpenSSL (1.0.2-):
+ *   For a TLS client the curves are used in the supported elliptic curves
+ *   extension. For a TLS server the curves are used to determine the set of
+ *   shared curves.
+ * If you are using an older OpenSSL (-1.0.1):
+ *   You can set only one curve. For a TLS client this does nothing. The
+ *   supported curves list can't be changed. For a TLS server the specified
+ *   curve is directly used.
+ */
+static VALUE
+ossl_sslctx_set_ecdh_curves(VALUE self, VALUE value)
+{
+    SSL_CTX *ctx;
+    const char *cstr = StringValueCStr(value);
+
+    rb_check_frozen(self);
+    GetSSLCTX(self, ctx);
+    if (!ctx)
+	ossl_raise(eSSLError, "SSL_CTX is not initialized");
+
+#if defined(HAVE_SSL_CTX_SET1_CURVES_LIST)
+    /* OpenSSL 1.0.2 or newer */
+    if (!SSL_CTX_set1_curves_list(ctx, cstr))
+	ossl_raise(eSSLError, NULL);
+#else
+    /* OpenSSL 1.0.1 or older, LibreSSL */
+    if (strstr(cstr, ":")) {
+	ossl_raise(rb_eArgError, "only one curve can be specified");
+    }
+    else {
+	EC_KEY *ecdh;
+	int nid = EC_curve_nist2nid(cstr);
+	if (nid == NID_undef)
+	    nid = OBJ_sn2nid(cstr);
+	if (nid == NID_undef)
+	    nid = OBJ_ln2nid(cstr);
+	if (nid == NID_undef)
+	    ossl_raise(eSSLError, "unknown curve name");
+	ecdh = EC_KEY_new_by_curve_name(nid);
+	if (!ecdh)
+	    ossl_raise(eSSLError, NULL);
+	SSL_CTX_set_tmp_ecdh(ctx, ecdh);
+    }
+#endif
+
+    return self;
+}
+#endif
 
 /*
  *  call-seq:
@@ -2140,6 +2221,7 @@ Init_ossl_ssl(void)
      */
     rb_attr(cSSLContext, rb_intern("client_cert_cb"), 1, 1, Qfalse);
 
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
     /*
      * A callback invoked when ECDH parameters are required.
      *
@@ -2149,8 +2231,12 @@ Init_ossl_ssl(void)
      *
      * The callback must return an OpenSSL::PKey::EC instance of the correct
      * key length.
+     *
+     * This callback is deprecated and won't work with newer OpenSSL (>= 1.1.0).
+     * Use OpenSSL::SSL::SSLContext#set_ecdh_curves instead.
      */
     rb_attr(cSSLContext, rb_intern("tmp_ecdh_callback"), 1, 1, Qfalse);
+#endif
 
     /*
      * Sets the context in which a session can be reused.  This allows
@@ -2288,6 +2374,9 @@ Init_ossl_ssl(void)
     rb_define_method(cSSLContext, "ciphers=",    ossl_sslctx_set_ciphers, 1);
     rb_define_method(cSSLContext, "security_level", ossl_sslctx_get_security_level, 0);
     rb_define_method(cSSLContext, "security_level=", ossl_sslctx_set_security_level, 1);
+#if !defined(OPENSSL_NO_EC)
+    rb_define_method(cSSLContext, "set_ecdh_curves", ossl_sslctx_set_ecdh_curves, 1);
+#endif
 
     rb_define_method(cSSLContext, "setup", ossl_sslctx_setup, 0);
 

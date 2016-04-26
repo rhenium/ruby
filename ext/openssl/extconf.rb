@@ -60,6 +60,11 @@ unless OpenSSL.check_func("SSL_library_init()", "openssl/ssl.h")
 end
 
 Logging::message "=== Checking for OpenSSL features... ===\n"
+def have_func_like(name, header)
+  have_func(name, [header]) ||
+    have_macro(name, [header]) && $defs.push("-DHAVE_#{name.upcase}")
+end
+
 # compile options
 have_func("SSLv2_method")
 have_func("SSLv3_method")
@@ -71,13 +76,13 @@ have_func("RAND_egd")
 engines = %w{builtin_engines openbsd_dev_crypto dynamic 4758cca aep atalla chil
              cswift nuron sureware ubsec padlock capi gmp gost cryptodev aesni}
 engines.each { |name|
-  have_func("ENGINE_load_#{name}", ["openssl/engine.h"])
+  have_func_like("ENGINE_load_#{name}", "openssl/engine.h")
 }
 
 # added in 0.9.8X
 have_func("EVP_CIPHER_CTX_new")
 have_func("EVP_CIPHER_CTX_free")
-have_func("SSL_CTX_clear_options", ["openssl/ssl.h"])
+have_func_like("SSL_CTX_clear_options", "openssl/ssl.h")
 
 # added in 1.0.0
 have_func("EVP_CIPHER_CTX_copy")
@@ -87,7 +92,7 @@ have_func("PKCS5_PBKDF2_HMAC")
 have_func("X509_NAME_hash_old")
 have_func("X509_STORE_CTX_get0_current_crl")
 have_func("X509_STORE_set_verify_cb")
-have_func("SSL_set_tlsext_host_name", ["openssl/ssl.h"])
+have_func_like("SSL_set_tlsext_host_name", "openssl/ssl.h")
 have_struct_member("CRYPTO_THREADID", "ptr", "openssl/crypto.h")
 
 # added in 1.0.1
@@ -96,10 +101,13 @@ have_macro("EVP_CTRL_GCM_GET_TAG", ['openssl/evp.h']) && $defs.push("-DHAVE_AUTH
 
 # added in 1.0.2
 have_func("CRYPTO_memcmp")
+have_func("EC_curve_nist2nid")
 have_func("X509_REVOKED_dup")
 have_func("X509_STORE_CTX_get0_store")
 have_func("SSL_CTX_set_alpn_select_cb")
-have_func("SSL_get_server_tmp_key", ["openssl/ssl.h"])
+have_func_like("SSL_CTX_set1_curves_list", "openssl/ssl.h")
+have_func_like("SSL_CTX_set_ecdh_auto", "openssl/ssl.h")
+have_func_like("SSL_get_server_tmp_key", "openssl/ssl.h")
 
 # added in 1.1.0
 have_func("CRYPTO_lock") || $defs.push("-DHAVE_OPENSSL_110_THREADING_API")
@@ -130,6 +138,7 @@ have_func("X509_STORE_up_ref")
 have_func("SSL_CTX_get_ciphers")
 have_func("SSL_CTX_get_security_level")
 have_func_like("SSL_CTX_set_min_proto_version", "openssl/ssl.h")
+have_func_like("SSL_CTX_set_tmp_ecdh_callback", "openssl/ssl.h") # removed
 have_func("SSL_SESSION_up_ref")
 have_func("EVP_PKEY_up_ref")
 have_func("ENGINE_cleanup") # removed
