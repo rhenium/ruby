@@ -112,7 +112,7 @@ have_func("EVP_MD_CTX_free")
 have_func("HMAC_CTX_new")
 have_func("HMAC_CTX_free")
 have_func("HMAC_CTX_reset")
-have_func("RAND_pseudo_bytes", ["openssl/rand.h"], "-Werror=deprecated-declarations")
+have_func("RAND_pseudo_bytes", ["openssl/rand.h"], "-Werror=deprecated-declarations") # deprecated
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
 have_func("X509_CRL_get0_signature")
@@ -131,6 +131,7 @@ have_func("SSL_CTX_get_ciphers")
 have_func_like("SSL_CTX_set_min_proto_version", "openssl/ssl.h")
 have_func("SSL_SESSION_up_ref")
 have_func("EVP_PKEY_up_ref")
+have_func("ENGINE_cleanup") # removed
 
 Logging::message "=== Checking done. ===\n"
 
