@@ -70,7 +70,6 @@ have_func("SSLv2_method")
 have_func("SSLv3_method")
 have_func("TLSv1_1_method")
 have_func("TLSv1_2_method")
-have_macro("OPENSSL_FIPS", ['openssl/opensslconf.h']) && $defs.push("-DHAVE_OPENSSL_FIPS")
 have_func("RAND_egd")
 # ENGINE_load_xx is deprecated in OpenSSL 1.1.0 and become a macro
 engines = %w{builtin_engines openbsd_dev_crypto dynamic 4758cca aep atalla chil
