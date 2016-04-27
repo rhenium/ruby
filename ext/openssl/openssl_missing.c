@@ -166,20 +166,6 @@ HMAC_CTX_reset(HMAC_CTX *ctx)
 }
 #endif
 
-#if !defined(HAVE_X509_STORE_SET_EX_DATA)
-int X509_STORE_set_ex_data(X509_STORE *str, int idx, void *data)
-{
-    return CRYPTO_set_ex_data(&str->ex_data, idx, data);
-}
-#endif
-
-#if !defined(HAVE_X509_STORE_GET_EX_DATA)
-void *X509_STORE_get_ex_data(X509_STORE *str, int idx)
-{
-    return CRYPTO_get_ex_data(&str->ex_data, idx);
-}
-#endif
-
 #if !defined(HAVE_X509_CRL_GET0_SIGNATURE)
 void
 X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_CRL *crl)
