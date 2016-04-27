@@ -160,6 +160,8 @@ ossl_engine_s_load(int argc, VALUE *argv, VALUE klass)
  * It is only necessary to run cleanup when engines are loaded via
  * OpenSSL::Engine.load. However, running cleanup before exit is recommended.
  *
+ * Note that this method is no-op if using OpenSSL 1.1.0 or newer.
+ *
  * See also, https://www.openssl.org/docs/crypto/engine.html
  */
 static VALUE
