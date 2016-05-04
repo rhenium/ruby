@@ -155,6 +155,10 @@ void X509_REQ_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, X509_REQ
 	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_X509_STORE);
 #endif
 
+#if !defined(HAVE_SSL_CTX_GET_CIPHERS)
+#  define SSL_CTX_get_ciphers(ctx) ((ctx)->cipher_list)
+#endif
+
 #if !defined(HAVE_SSL_SESSION_UP_REF)
 #  define SSL_SESSION_up_ref(x) \
 	CRYPTO_add(&(x)->references, 1, CRYPTO_LOCK_SSL_SESSION);
