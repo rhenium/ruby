@@ -102,6 +102,7 @@ OpenSSL.check_func_or_macro("SSL_get_server_tmp_key", "openssl/ssl.h")
 OpenSSL.check_func("RAND_pseudo_bytes", "openssl/rand.h") # deprecated
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
+OpenSSL.check_func_or_macro("SSL_CTX_set_min_proto_version", "openssl/ssl.h")
 
 have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
 Logging::message "=== Checking done. ===\n"
