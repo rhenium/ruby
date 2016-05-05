@@ -107,10 +107,13 @@ have_macro("EVP_CTRL_GCM_GET_TAG", ['openssl/evp.h']) && $defs.push("-DHAVE_AUTH
 
 # added in 1.0.2
 have_func("CRYPTO_memcmp")
+have_func("EC_curve_nist2nid")
 have_func("X509_REVOKED_dup")
 have_func("X509_STORE_CTX_get0_store")
 have_func("SSL_is_server")
 have_func("SSL_CTX_set_alpn_select_cb")
+OpenSSL.check_func_or_macro("SSL_CTX_set1_curves_list", "openssl/ssl.h")
+OpenSSL.check_func_or_macro("SSL_CTX_set_ecdh_auto", "openssl/ssl.h")
 OpenSSL.check_func_or_macro("SSL_get_server_tmp_key", "openssl/ssl.h")
 
 # added in 1.1.0
@@ -144,6 +147,7 @@ have_func("SSL_SESSION_up_ref")
 have_func("EVP_PKEY_up_ref")
 have_func("SSL_CTX_get_security_level")
 OpenSSL.check_func_or_macro("SSL_CTX_set_min_proto_version", "openssl/ssl.h")
+OpenSSL.check_func_or_macro("SSL_CTX_set_tmp_ecdh_callback", "openssl/ssl.h") # removed
 
 Logging::message "=== Checking done. ===\n"
 

@@ -377,37 +377,39 @@ module OpenSSL::TestPairM
     accepted.close if accepted.respond_to?(:close)
   end
 
-  def test_ecdh_callback
-    called = false
-    ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "ECDH"
-    ctx2.tmp_ecdh_callback = ->(*args) {
-      called = true
-      OpenSSL::PKey::EC.new "prime256v1"
-    }
+  def test_ecdh_curves
+    # FIXME: LibreSSL currently does not implement SSL_CTX_set1_curves but
+    # it may be implemented in future
+    if OpenSSL::OPENSSL_VERSION_NUMBER >= 0x10002000 &&
+        !OpenSSL::OPENSSL_VERSION.include?("LibreSSL")
+      server_curves = "P-256:P-224"
+      client_curves = "P-384:P-521:P-224"
+    else
+      server_curves = "P-224"
+      client_curves = "P-224"
+    end
 
     sock1, sock2 = tcp_pair
 
-    s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
     ctx1 = OpenSSL::SSL::SSLContext.new
     ctx1.ciphers = "ECDH"
-
+    ctx1.set_ecdh_curves(client_curves)
+    ctx1.security_level = 0
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
-    th = Thread.new do
-      begin
-        rv = s1.connect_nonblock(exception: false)
-        case rv
-        when :wait_writable
-          IO.select(nil, [s1], nil, 5)
-        when :wait_readable
-          IO.select([s1], nil, nil, 5)
-        end
-      end until rv == s1
+
+    ctx2 = OpenSSL::SSL::SSLContext.new
+    ctx2.ciphers = "ECDH"
+    ctx2.set_ecdh_curves(server_curves)
+    ctx2.security_level = 0
+    s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
+
+    th = Thread.new { s2.accept }
+    s1.connect
+
+    assert s1.cipher[0].start_with?("AECDH"), "AECDH should be used"
+    if s1.respond_to?(:tmp_key)
+      assert_equal "secp224r1", s1.tmp_key.group.curve_name
     end
-
-    accepted = s2.accept
-
-    assert called, 'ecdh callback should be called'
   rescue OpenSSL::SSL::SSLError => e
     if e.message =~ /no cipher match/
       skip "ECDH cipher not supported."
@@ -420,7 +422,6 @@ module OpenSSL::TestPairM
     s2.close if s2
     sock1.close if sock1
     sock2.close if sock2
-    accepted.close if accepted.respond_to?(:close)
   end
 
   def test_connect_accept_nonblock_no_exception
