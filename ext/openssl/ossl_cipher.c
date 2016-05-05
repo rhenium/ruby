@@ -11,10 +11,12 @@
 
 #define NewCipher(klass) \
     TypedData_Wrap_Struct((klass), &ossl_cipher_type, 0)
-#define MakeCipher(obj, klass, ctx) \
-    (obj) = TypedData_Make_Struct((klass), EVP_CIPHER_CTX, &ossl_cipher_type, (ctx))
-#define AllocCipher(obj, ctx) \
-    (DATA_PTR(obj) = (ctx) = ZALLOC(EVP_CIPHER_CTX))
+#define AllocCipher(obj, ctx) do { \
+    (ctx) = EVP_CIPHER_CTX_new(); \
+    if (!(ctx)) \
+	ossl_raise(rb_eRuntimeError, NULL); \
+    RTYPEDDATA_DATA(obj) = (ctx); \
+} while (0)
 #define GetCipherInit(obj, ctx) do { \
     TypedData_Get_Struct((obj), EVP_CIPHER_CTX, &ossl_cipher_type, (ctx)); \
 } while (0)
@@ -37,13 +39,13 @@ VALUE eCipherError;
 
 static VALUE ossl_cipher_alloc(VALUE klass);
 static void ossl_cipher_free(void *ptr);
-static size_t ossl_cipher_memsize(const void *ptr);
 
 static const rb_data_type_t ossl_cipher_type = {
     "OpenSSL/Cipher",
-    {0, ossl_cipher_free, ossl_cipher_memsize,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    {
+	0, ossl_cipher_free,
+    },
+    0, 0, RUBY_TYPED_FREE_IMMEDIATELY,
 };
 
 /*
@@ -67,7 +69,6 @@ ossl_cipher_new(const EVP_CIPHER *cipher)
 
     ret = ossl_cipher_alloc(cCipher);
     AllocCipher(ret, ctx);
-    EVP_CIPHER_CTX_init(ctx);
     if (EVP_CipherInit_ex(ctx, cipher, NULL, NULL, NULL, -1) != 1)
 	ossl_raise(eCipherError, NULL);
 
@@ -85,13 +86,6 @@ ossl_cipher_free(void *ptr)
 	EVP_CIPHER_CTX_cleanup(ctx);
 	ruby_xfree(ctx);
     }
-}
-
-static size_t
-ossl_cipher_memsize(const void *ptr)
-{
-    const EVP_CIPHER_CTX *ctx = ptr;
-    return sizeof(*ctx);
 }
 
 static VALUE
@@ -122,7 +116,6 @@ ossl_cipher_initialize(VALUE self, VALUE str)
 	ossl_raise(rb_eRuntimeError, "Cipher already inititalized!");
     }
     AllocCipher(self, ctx);
-    EVP_CIPHER_CTX_init(ctx);
     if (!(cipher = EVP_get_cipherbyname(name))) {
 	ossl_raise(rb_eRuntimeError, "unsupported cipher algorithm (%s)", name);
     }
