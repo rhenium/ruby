@@ -80,4 +80,8 @@ int HMAC_CTX_reset(HMAC_CTX *ctx);
 	CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_X509_STORE, l, p, newf, dupf, freef)
 #endif
 
+#if !defined(HAVE_OCSP_SINGLERESP_GET0_ID)
+#  define OCSP_SINGLERESP_get0_id(s) ((s)->certId)
+#endif
+
 #endif /* _OSSL_OPENSSL_MISSING_H_ */
