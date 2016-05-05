@@ -13,9 +13,7 @@
 #if !defined(OPENSSL_NO_ENGINE)
 # include <openssl/engine.h>
 #endif
-#if !defined(OPENSSL_NO_HMAC)
-# include <openssl/hmac.h>
-#endif
+#include <openssl/hmac.h>
 #include <openssl/x509_vfy.h>
 
 #include "openssl_missing.h"
@@ -44,7 +42,6 @@ EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in)
 }
 #endif
 
-#if !defined(OPENSSL_NO_HMAC)
 #if !defined(HAVE_HMAC_CTX_COPY)
 void
 HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
@@ -57,7 +54,6 @@ HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
     EVP_MD_CTX_copy(&out->o_ctx, &in->o_ctx);
 }
 #endif /* HAVE_HMAC_CTX_COPY */
-#endif /* NO_HMAC */
 
 /* added in 1.0.2 */
 #if !defined(HAVE_CRYPTO_MEMCMP)
