@@ -10,10 +10,6 @@
 #if !defined(_OSSL_OPENSSL_MISSING_H_)
 #define _OSSL_OPENSSL_MISSING_H_
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #ifndef TYPEDEF_D2I_OF
 typedef char *d2i_of_void();
 #endif
@@ -200,10 +196,5 @@ int ASN1_put_eoc(unsigned char **pp);
 #  define SSL_CTX_clear_options(ctx, op) do \
 	(ctx)->options &= ~(op); while (0)
 #endif
-
-#if defined(__cplusplus)
-}
-#endif
-
 
 #endif /* _OSSL_OPENSSL_MISSING_H_ */
