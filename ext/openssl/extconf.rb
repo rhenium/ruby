@@ -102,6 +102,7 @@ have_macro("EVP_CTRL_GCM_GET_TAG", ['openssl/evp.h']) && $defs.push("-DHAVE_AUTH
 # added in 1.0.2
 have_func("CRYPTO_memcmp")
 have_func("X509_REVOKED_dup")
+have_func("SSL_is_server")
 have_func("SSL_CTX_set_alpn_select_cb")
 OpenSSL.check_func_or_macro("SSL_get_server_tmp_key", "openssl/ssl.h")
 

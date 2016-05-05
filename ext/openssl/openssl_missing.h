@@ -35,6 +35,10 @@ int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * vol
 	(d2i_of_void *)d2i_X509_REVOKED, (char *)(rev))
 #endif
 
+#if !defined(HAVE_SSL_IS_SERVER)
+#  define SSL_is_server(s) ((s)->server)
+#endif
+
 /* added in 1.1.0 */
 #if !defined(HAVE_X509_STORE_GET_EX_DATA)
 #  define X509_STORE_get_ex_data(x, idx) \
