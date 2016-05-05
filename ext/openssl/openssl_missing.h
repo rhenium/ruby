@@ -30,7 +30,7 @@ int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in);
 #endif
 
 #if !defined(HAVE_HMAC_CTX_COPY)
-void HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
+int HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 #endif
 
 /* added in 1.0.2 */
@@ -48,6 +48,18 @@ int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * vol
 #endif
 
 /* added in 1.1.0 */
+#if !defined(HAVE_HMAC_CTX_NEW)
+HMAC_CTX *HMAC_CTX_new(void);
+#endif
+
+#if !defined(HAVE_HMAC_CTX_FREE)
+void HMAC_CTX_free(HMAC_CTX *ctx);
+#endif
+
+#if !defined(HAVE_HMAC_CTX_RESET)
+int HMAC_CTX_reset(HMAC_CTX *ctx);
+#endif
+
 #if !defined(HAVE_X509_STORE_GET_EX_DATA)
 #  define X509_STORE_get_ex_data(x, idx) \
 	CRYPTO_get_ex_data(&(x)->ex_data, idx)

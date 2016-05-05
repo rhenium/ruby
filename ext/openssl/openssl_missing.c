@@ -65,15 +65,19 @@ EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in)
 #endif
 
 #if !defined(HAVE_HMAC_CTX_COPY)
-void
+int
 HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in)
 {
-    if (!out || !in) return;
+    if (!out || !in)
+	return 0;
+
     memcpy(out, in, sizeof(HMAC_CTX));
 
     EVP_MD_CTX_copy(&out->md_ctx, &in->md_ctx);
     EVP_MD_CTX_copy(&out->i_ctx, &in->i_ctx);
     EVP_MD_CTX_copy(&out->o_ctx, &in->o_ctx);
+
+    return 1;
 }
 #endif /* HAVE_HMAC_CTX_COPY */
 
@@ -93,5 +97,36 @@ CRYPTO_memcmp(const volatile void * volatile in_a,
 	x |= a[i] ^ b[i];
 
     return x;
+}
+#endif
+
+/*** added in 1.1.0 ***/
+#if !defined(HAVE_HMAC_CTX_NEW)
+HMAC_CTX *
+HMAC_CTX_new(void)
+{
+    HMAC_CTX *ctx = OPENSSL_malloc(sizeof(HMAC_CTX));
+    HMAC_CTX_reset(ctx);
+    if (!ctx)
+	return NULL;
+    return ctx;
+}
+#endif
+
+#if !defined(HAVE_HMAC_CTX_FREE)
+void
+HMAC_CTX_free(HMAC_CTX *ctx)
+{
+    HMAC_CTX_cleanup(ctx);
+    OPENSSL_free(ctx);
+}
+#endif
+
+#if !defined(HAVE_HMAC_CTX_RESET)
+int
+HMAC_CTX_reset(HMAC_CTX *ctx)
+{
+    HMAC_CTX_init(ctx);
+    return 0;
 }
 #endif

@@ -103,6 +103,9 @@ OpenSSL.check_func_or_macro("SSL_get_server_tmp_key", "openssl/ssl.h")
 
 # added in 1.1.0
 have_func("CRYPTO_lock") || $defs.push("-DHAVE_OPENSSL_110_THREADING_API")
+have_func("HMAC_CTX_new")
+have_func("HMAC_CTX_free")
+have_func("HMAC_CTX_reset")
 OpenSSL.check_func("RAND_pseudo_bytes", "openssl/rand.h") # deprecated
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
