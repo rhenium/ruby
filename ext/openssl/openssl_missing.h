@@ -11,6 +11,14 @@
 #define _OSSL_OPENSSL_MISSING_H_
 
 /* added in 0.9.8X */
+#if !defined(HAVE_EVP_CIPHER_CTX_NEW)
+EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void);
+#endif
+
+#if !defined(HAVE_EVP_CIPHER_CTX_FREE)
+void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx);
+#endif
+
 #if !defined(HAVE_SSL_CTX_CLEAR_OPTIONS)
 # define SSL_CTX_clear_options(ctx, op) do \
 	(ctx)->options &= ~(op); while (0)
