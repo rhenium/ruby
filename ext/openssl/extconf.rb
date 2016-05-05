@@ -91,6 +91,7 @@ OpenSSL.check_func_or_macro("SSL_CTX_clear_options", "openssl/ssl.h")
 
 # added in 1.0.0
 have_func("EVP_CIPHER_CTX_copy")
+have_func("EVP_PKEY_base_id")
 have_func("HMAC_CTX_copy")
 have_func("PKCS5_PBKDF2_HMAC")
 have_func("X509_NAME_hash_old")
