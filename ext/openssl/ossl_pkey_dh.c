@@ -101,21 +101,25 @@ dh_blocking_gen(void *arg)
 static DH *
 dh_generate(int size, int gen)
 {
-    BN_GENCB cb;
     struct ossl_generate_cb_arg cb_arg;
     struct dh_blocking_gen_arg gen_arg;
     DH *dh = DH_new();
+    BN_GENCB *cb = BN_GENCB_new();
 
-    if (!dh) return 0;
+    if (!dh || !cb) {
+	if (dh) DH_free(dh);
+	if (cb) BN_GENCB_free(cb);
+	return 0;
+    }
 
     memset(&cb_arg, 0, sizeof(struct ossl_generate_cb_arg));
     if (rb_block_given_p())
 	cb_arg.yield = 1;
-    BN_GENCB_set(&cb, ossl_generate_cb_2, &cb_arg);
+    BN_GENCB_set(cb, ossl_generate_cb_2, &cb_arg);
     gen_arg.dh = dh;
     gen_arg.size = size;
     gen_arg.gen = gen;
-    gen_arg.cb = &cb;
+    gen_arg.cb = cb;
     if (cb_arg.yield == 1) {
 	/* we cannot release GVL when callback proc is supplied */
 	dh_blocking_gen(&gen_arg);
@@ -124,6 +128,7 @@ dh_generate(int size, int gen)
 	rb_thread_call_without_gvl(dh_blocking_gen, &gen_arg, ossl_generate_cb_stop, &cb_arg);
     }
 
+    BN_GENCB_free(cb);
     if (!gen_arg.result) {
 	DH_free(dh);
 	if (cb_arg.state) rb_jump_tag(cb_arg.state);
