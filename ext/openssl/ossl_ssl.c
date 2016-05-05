@@ -965,6 +965,66 @@ ossl_sslctx_set_ciphers(VALUE self, VALUE v)
 }
 
 /*
+ * call-seq:
+ *    ctx.security_level => 0, .., 5
+ *
+ * The security level for this context. This is new in OpenSSL 1.1.0 and
+ * always returns 0 if using older OpenSSL.
+ */
+static VALUE
+ossl_sslctx_get_security_level(VALUE self)
+{
+    SSL_CTX *ctx;
+    int i;
+
+    GetSSLCTX(self, ctx);
+    if (!ctx) {
+	rb_warning("SSL_CTX is not initialized.");
+	return Qnil;
+    }
+
+#if defined(HAVE_SSL_CTX_GET_SECURITY_LEVEL)
+    i = SSL_CTX_get_security_level(ctx);
+#else
+    i = 0;
+#endif
+    return INT2FIX(i);
+}
+
+/*
+ * call-seq:
+ *    ctx.security_level = 0
+ *    ctx.security_level = 5
+ *
+ * Sets the security level for this context. This is new in OpenSSL 1.1.0.
+ * If using older OpenSSL, setting a value other than 0 raises
+ * NotImplementedError.
+ *
+ * See the manpage of SSL_CTX_set_security_level(3) for details.
+ */
+static VALUE
+ossl_sslctx_set_security_level(VALUE self, VALUE v)
+{
+    SSL_CTX *ctx;
+
+    rb_check_frozen(self);
+
+    GetSSLCTX(self, ctx);
+    if (!ctx)
+	ossl_raise(eSSLError, "SSL_CTX is not initialized.");
+
+#if defined(HAVE_SSL_CTX_GET_SECURITY_LEVEL)
+    SSL_CTX_set_security_level(ctx, NUM2INT(v));
+#else
+    if (NUM2INT(v) != 0)
+	ossl_raise(rb_eNotImpError, "setting security level != 0 is not "
+		   "supported in this version of OpenSSL");
+#endif
+
+    return v;
+}
+
+/*
  *  call-seq:
  *     ctx.session_add(session) -> true | false
  *
@@ -2232,6 +2292,8 @@ Init_ossl_ssl(void)
     rb_define_method(cSSLContext, "ssl_version=", ossl_sslctx_set_ssl_version, 1);
     rb_define_method(cSSLContext, "ciphers",     ossl_sslctx_get_ciphers, 0);
     rb_define_method(cSSLContext, "ciphers=",    ossl_sslctx_set_ciphers, 1);
+    rb_define_method(cSSLContext, "security_level", ossl_sslctx_get_security_level, 0);
+    rb_define_method(cSSLContext, "security_level=", ossl_sslctx_set_security_level, 1);
 
     rb_define_method(cSSLContext, "setup", ossl_sslctx_setup, 0);
 
