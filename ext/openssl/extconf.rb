@@ -111,6 +111,7 @@ have_func("HMAC_CTX_reset")
 OpenSSL.check_func("RAND_pseudo_bytes", "openssl/rand.h") # deprecated
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
+have_func("OCSP_SINGLERESP_get0_id")
 OpenSSL.check_func_or_macro("SSL_CTX_set_min_proto_version", "openssl/ssl.h")
 
 have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
