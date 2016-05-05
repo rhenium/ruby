@@ -142,6 +142,7 @@ have_func("X509_STORE_up_ref")
 have_func("SSL_CTX_get_ciphers")
 have_func("SSL_SESSION_up_ref")
 have_func("EVP_PKEY_up_ref")
+have_func("SSL_CTX_get_security_level")
 OpenSSL.check_func_or_macro("SSL_CTX_set_min_proto_version", "openssl/ssl.h")
 
 Logging::message "=== Checking done. ===\n"
