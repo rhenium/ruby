@@ -1,11 +1,13 @@
 #!/bin/sh
 
 list_branches() {
-	git for-each-ref --sort=-committerdate --format='
+	fmt='
 		d=%(committerdate:short)
 		r=%(refname)
-		echo $d ${r#refs/heads}
-	' refs/heads
+		echo "$d ${r#refs/heads/}"
+	'
+	t=`git for-each-ref --sort=-committerdate --format="$fmt" refs/heads`
+	eval "$t"
 }
 
 git update-index --refresh || exit 1
@@ -23,6 +25,7 @@ git reset --hard upstream/trunk
 
 # then merge branches
 git fetch origin --progress
+git merge --no-edit --no-ff rhe-tools || exit 2
 while list_branches && echo -n "> " && read line; do
 	if ORIGIN_HEAD=$(git rev-parse "origin/$line"); then
 		LOCAL_HEAD=$(git rev-parse "$line")
