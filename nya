@@ -1,0 +1,44 @@
+#!/bin/sh
+
+list_branches() {
+	git for-each-ref --sort=-committerdate --format='
+		d=%(committerdate:short)
+		r=%(refname)
+		echo $d ${r#refs/heads}
+	' refs/heads
+}
+
+git update-index --refresh || exit 1
+
+case "$(git diff-index --name-status HEAD)" in
+'')	;;
+*)
+	echo "there are local modifications"
+	exit 1
+esac
+
+# reset first
+git fetch upstream --progress
+git reset --hard upstream/trunk
+
+# then merge branches
+git fetch origin --progress
+while list_branches && echo -n "> " && read line; do
+	if ORIGIN_HEAD=$(git rev-parse "origin/$line"); then
+		LOCAL_HEAD=$(git rev-parse "$line")
+		if [ "x$LOCAL_HEAD" != "x$ORIGIN_HEAD" ]; then
+			echo "origin and local differs?"
+			exit 1
+		fi
+	fi
+
+	echo "merging branch $line"
+	while :; do
+		if git merge --no-edit --no-ff "$line"; then
+			break
+		fi
+		echo -n "merge failed; press a key to retry"
+		read
+	done
+done
+
