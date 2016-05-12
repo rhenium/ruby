@@ -148,6 +148,10 @@ int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, EVP_CIPHER_CTX *in);
 int X509_CRL_set_version(X509_CRL *x, long version);
 #endif
 
+#if !defined(HAVE_CRYPTO_MEMCMP)
+int CRYPTO_memcmp(const volatile void * volatile in_a, const volatile void * volatile in_b, size_t len);
+#endif
+
 #if !defined(HAVE_X509_CRL_SET_ISSUER_NAME)
 int X509_CRL_set_issuer_name(X509_CRL *x, X509_NAME *name);
 #endif
