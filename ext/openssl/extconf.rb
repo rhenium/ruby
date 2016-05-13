@@ -94,6 +94,9 @@ have_func("EVP_CIPHER_CTX_copy")
 have_func("HMAC_CTX_copy")
 have_func("PKCS5_PBKDF2_HMAC")
 have_func("X509_NAME_hash_old")
+have_func("X509_STORE_CTX_get0_current_crl")
+have_func("X509_STORE_set_verify_cb")
+have_func("i2d_ASN1_SET_ANY")
 OpenSSL.check_func_or_macro("SSL_set_tlsext_host_name", "openssl/ssl.h")
 have_struct_member("CRYPTO_THREADID", "ptr", "openssl/crypto.h")
 
@@ -104,6 +107,7 @@ have_macro("EVP_CTRL_GCM_GET_TAG", ['openssl/evp.h']) && $defs.push("-DHAVE_AUTH
 # added in 1.0.2
 have_func("CRYPTO_memcmp")
 have_func("X509_REVOKED_dup")
+have_func("X509_STORE_CTX_get0_store")
 have_func("SSL_is_server")
 have_func("SSL_CTX_set_alpn_select_cb")
 OpenSSL.check_func_or_macro("SSL_get_server_tmp_key", "openssl/ssl.h")
@@ -122,6 +126,14 @@ have_func("HMAC_CTX_reset")
 OpenSSL.check_func("RAND_pseudo_bytes", "openssl/rand.h") # deprecated
 have_func("X509_STORE_get_ex_data")
 have_func("X509_STORE_set_ex_data")
+have_func("X509_CRL_get0_signature")
+have_func("X509_REQ_get0_signature")
+have_func("X509_REVOKED_get0_serialNumber")
+have_func("X509_REVOKED_get0_revocationDate")
+have_func("X509_get0_tbs_sigalg")
+have_func("X509_STORE_CTX_get0_untrusted")
+have_func("X509_STORE_CTX_get0_cert")
+have_func("X509_STORE_CTX_get0_chain")
 have_func("OCSP_SINGLERESP_get0_id")
 have_func("X509_up_ref")
 have_func("X509_CRL_up_ref")
@@ -130,7 +142,6 @@ have_func("SSL_SESSION_up_ref")
 have_func("EVP_PKEY_up_ref")
 OpenSSL.check_func_or_macro("SSL_CTX_set_min_proto_version", "openssl/ssl.h")
 
-have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
 Logging::message "=== Checking done. ===\n"
 
 create_header
