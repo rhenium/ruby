@@ -9,6 +9,7 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     @rsa2048 = OpenSSL::TestUtils::TEST_KEY_RSA2048
     @dsa256  = OpenSSL::TestUtils::TEST_KEY_DSA256
     @dsa512  = OpenSSL::TestUtils::TEST_KEY_DSA512
+    @p256    = OpenSSL::TestUtils::TEST_KEY_EC_P256V1
     @ca = OpenSSL::X509::Name.parse("/DC=org/DC=ruby-lang/CN=CA")
     @ee1 = OpenSSL::X509::Name.parse("/DC=org/DC=ruby-lang/CN=EE1")
     @ee2 = OpenSSL::X509::Name.parse("/DC=org/DC=ruby-lang/CN=EE2")
@@ -42,7 +43,9 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     dsa_digest = OpenSSL::TestUtils::DSA_SIGNATURE_DIGEST.new
 
     [
-      [@rsa1024, sha1], [@rsa2048, sha1], [@dsa256, dsa_digest], [@dsa512, dsa_digest]
+      [@rsa1024, sha1], [@rsa2048, sha1],
+      [@dsa256, dsa_digest], [@dsa512, dsa_digest],
+      [@p256, sha1],
     ].each{|pk, digest|
       cert = issue_cert(@ca, pk, 1, Time.now, Time.now+3600, exts,
                         nil, nil, digest)
@@ -133,6 +136,7 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     assert_equal(true,  cert.verify(@rsa2048))
     assert_equal(false, certificate_error_returns_false { cert.verify(@dsa256) })
     assert_equal(false, certificate_error_returns_false { cert.verify(@dsa512) })
+    assert_equal(false, certificate_error_returns_false { cert.verify(@p256) })
     cert.serial = 2
     assert_equal(false, cert.verify(@rsa2048))
   end
@@ -145,6 +149,7 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
 
     assert_equal(false, certificate_error_returns_false { cert.verify(@dsa256) })
     assert_equal(false, certificate_error_returns_false { cert.verify(@dsa512) })
+    assert_equal(false, certificate_error_returns_false { cert.verify(@p256) })
     cert.subject = @ee1
     assert_equal(false, cert.verify(@rsa2048))
   rescue OpenSSL::X509::CertificateError # RHEL7 disables MD5
@@ -157,6 +162,7 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     assert_equal(false, certificate_error_returns_false { cert.verify(@rsa2048) })
     assert_equal(false, cert.verify(@dsa256))
     assert_equal(true,  cert.verify(@dsa512))
+    assert_equal(false, certificate_error_returns_false { cert.verify(@p256) })
     cert.not_after = Time.now
     assert_equal(false, cert.verify(@dsa512))
   end
@@ -168,6 +174,7 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     assert_equal(true, cert.verify(@rsa2048))
     assert_equal(false, certificate_error_returns_false { cert.verify(@dsa256) })
     assert_equal(false, certificate_error_returns_false { cert.verify(@dsa512) })
+    assert_equal(false, certificate_error_returns_false { cert.verify(@p256) })
     cert.subject = @ee1
     assert_equal(false, cert.verify(@rsa2048))
   rescue OpenSSL::X509::CertificateError
@@ -178,6 +185,18 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
       issue_cert(@ca, @dsa512, 1, Time.now, Time.now+3600, [],
                  nil, nil, OpenSSL::Digest::MD5.new)
     }
+  end
+
+  def test_sign_and_verify_ecdsa_sha1
+    cert = issue_cert(@ca, @p256, 1, Time.now, Time.now+3600, [],
+                      nil, nil, OpenSSL::Digest::SHA1.new)
+    assert_equal(false, certificate_error_returns_false { cert.verify(@rsa1024) })
+    assert_equal(false, certificate_error_returns_false { cert.verify(@rsa2048) })
+    assert_equal(false, certificate_error_returns_false { cert.verify(@dsa256) })
+    assert_equal(false, certificate_error_returns_false { cert.verify(@dsa512) })
+    assert_equal(true, cert.verify(@p256))
+    cert.serial = 123
+    assert_equal(false, cert.verify(@p256))
   end
 
   def test_dsig_algorithm_mismatch
@@ -213,6 +232,9 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     cert = issue_cert(@ca, @rsa2048, 1, Time.now, Time.now+3600, [],
                       nil, nil, OpenSSL::Digest::SHA1.new)
     assert_equal(true, cert.check_private_key(@rsa2048))
+    cert = issue_cert(@ca, @p256, 1, Time.now, Time.now+3600, [],
+                      nil, nil, OpenSSL::Digest::SHA1.new)
+    assert_equal(true, cert.check_private_key(@p256))
   end
 
   private

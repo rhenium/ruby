@@ -122,7 +122,7 @@ AQjjxMXhwULlmuR/K+WwlaZPiLIBYalLAZQ7ZbOPeVkJ8ePao0eLAgEC
     cert.serial = serial
     cert.subject = dn
     cert.issuer = issuer.subject
-    cert.public_key = key.public_key
+    cert.public_key = key.public_pkey
     cert.not_before = not_before
     cert.not_after = not_after
     ef = OpenSSL::X509::ExtensionFactory.new

@@ -284,6 +284,13 @@ AwEAAQ==
     assert(pem)
   end
 
+  def test_public_pkey
+    key = OpenSSL::TestUtils::TEST_KEY_RSA1024
+    key_test = key.public_pkey
+    assert(!key_test.private?)
+    assert(key_test.public?)
+  end
+
   private
 
   def check_PUBKEY(asn1, key)

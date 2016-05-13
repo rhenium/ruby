@@ -562,12 +562,16 @@ ossl_rsa_to_text(VALUE self)
 
 /*
  * call-seq:
- *    rsa.public_key -> RSA
+ *    rsa.public_pkey -> RSA
  *
  * Makes new RSA instance containing the public key from the private key.
+ *
+ * === Note
+ *  This method was renamed from OpenSSL::PKey::RSA#public_key. It remains as
+ *  an alias.
  */
 static VALUE
-ossl_rsa_to_public_key(VALUE self)
+ossl_rsa_to_public_pkey(VALUE self)
 {
     EVP_PKEY *pkey;
     RSA *rsa;
@@ -664,7 +668,8 @@ Init_ossl_rsa(void)
     rb_define_alias(cRSA, "to_pem", "export");
     rb_define_alias(cRSA, "to_s", "export");
     rb_define_method(cRSA, "to_der", ossl_rsa_to_der, 0);
-    rb_define_method(cRSA, "public_key", ossl_rsa_to_public_key, 0);
+    rb_define_method(cRSA, "public_pkey", ossl_rsa_to_public_pkey, 0);
+    rb_define_alias(cRSA, "public_key", "public_pkey");
     rb_define_method(cRSA, "public_encrypt", ossl_rsa_public_encrypt, -1);
     rb_define_method(cRSA, "public_decrypt", ossl_rsa_public_decrypt, -1);
     rb_define_method(cRSA, "private_encrypt", ossl_rsa_private_encrypt, -1);

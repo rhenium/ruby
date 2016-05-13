@@ -68,6 +68,13 @@ YoaOffgTf5qxiwkjnlVZQc3whgnEt9FpVMvQ9eknyeGB5KHfayAc3+hUAvI3/Cr3
     assert_equal(dh.to_pem, public_key.to_pem)
   end
 
+  def test_public_pkey
+    dh = OpenSSL::TestUtils::TEST_KEY_DH1024
+    dh_test = dh.public_pkey
+    assert(!dh_test.private?)
+    assert(dh_test.public?)
+  end
+
   def test_generate_key
     dh = OpenSSL::TestUtils::TEST_KEY_DH1024.public_key # creates a copy
     assert_no_key(dh)

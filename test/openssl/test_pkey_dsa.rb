@@ -228,6 +228,11 @@ YNMbNw==
     assert(pem)
   end
 
+  def test_public_pkey
+    key = OpenSSL::TestUtils::TEST_KEY_DSA256
+    assert_equal(key.public_key.to_der, key.public_pkey.to_der)
+  end
+
   private
 
   def check_sign_verify(digest)

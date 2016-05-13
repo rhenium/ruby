@@ -261,7 +261,8 @@ ossl_dsa_initialize(int argc, VALUE *argv, VALUE self)
  *    dsa.public? -> true | false
  *
  * Indicates whether this DSA instance has a public key associated with it or
- * not. The public key may be retrieved with DSA#public_key.
+ * not. An DSA instance that contains only public key may be retrieved with
+ * DSA#public_pkey.
  */
 static VALUE
 ossl_dsa_is_public(VALUE self)
@@ -278,7 +279,7 @@ ossl_dsa_is_public(VALUE self)
  *    dsa.private? -> true | false
  *
  * Indicates whether this DSA instance has a private key associated with it or
- * not. The private key may be retrieved with DSA#private_key.
+ * not.
  */
 static VALUE
 ossl_dsa_is_private(VALUE self)
@@ -436,7 +437,7 @@ ossl_dsa_to_text(VALUE self)
 
 /*
  *  call-seq:
- *    dsa.public_key -> aDSA
+ *    dsa.public_pkey -> aDSA
  *
  * Returns a new DSA instance that carries just the public key information.
  * If the current instance has also private key information, this will no
@@ -446,13 +447,15 @@ ossl_dsa_to_text(VALUE self)
  *
  * === Example
  *  dsa = OpenSSL::PKey::DSA.new(2048) # has public and private information
- *  pub_key = dsa.public_key # has only the public part available
+ *  pub_key = dsa.public_pkey # has only the public part available
  *  pub_key_der = pub_key.to_der # it's safe to publish this
  *
- *
+ * === Note
+ *  This method was renamed from OpenSSL::PKey::DSA#public_key. It remains as
+ *  an alias.
  */
 static VALUE
-ossl_dsa_to_public_key(VALUE self)
+ossl_dsa_to_public_pkey(VALUE self)
 {
     EVP_PKEY *pkey;
     DSA *dsa;
@@ -603,7 +606,8 @@ Init_ossl_dsa(void)
     rb_define_alias(cDSA, "to_pem", "export");
     rb_define_alias(cDSA, "to_s", "export");
     rb_define_method(cDSA, "to_der", ossl_dsa_to_der, 0);
-    rb_define_method(cDSA, "public_key", ossl_dsa_to_public_key, 0);
+    rb_define_method(cDSA, "public_pkey", ossl_dsa_to_public_pkey, 0);
+    rb_define_alias(cDSA, "public_key", "public_pkey");
     rb_define_method(cDSA, "syssign", ossl_dsa_sign, 1);
     rb_define_method(cDSA, "sysverify", ossl_dsa_verify, 2);
 

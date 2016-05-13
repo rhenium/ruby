@@ -632,6 +632,30 @@ static VALUE ossl_ec_key_check_key(VALUE self)
 
 /*
  *  call-seq:
+ *     key.public_pkey   => OpenSSL::PKey::EC
+ *
+ *  Returns a new EC instance that has only public information.
+ */
+static VALUE ossl_ec_key_public_pkey(VALUE self)
+{
+    EC_KEY *ec, *ec_new;
+
+    Require_EC_KEY(self, ec);
+
+    if (!EC_KEY_get0_public_key(ec))
+	ossl_raise(eECError, "public key is not set");
+
+    ec_new = EC_KEY_dup(ec);
+    if (!ec_new)
+	ossl_raise(eECError, "EC_KEY_dup");
+
+    EC_KEY_set_private_key(ec_new, NULL);
+
+    return ec_instance(cEC, ec_new);
+}
+
+/*
+ *  call-seq:
  *     key.dh_compute_key(pubkey)   => String
  *
  *  See the OpenSSL documentation for ECDH_compute_key()
@@ -1634,6 +1658,7 @@ void Init_ossl_ec(void)
 */
     rb_define_method(cEC, "generate_key", ossl_ec_key_generate_key, 0);
     rb_define_method(cEC, "check_key", ossl_ec_key_check_key, 0);
+    rb_define_method(cEC, "public_pkey", ossl_ec_key_public_pkey, 0);
 
     rb_define_method(cEC, "dh_compute_key", ossl_ec_key_dh_compute_key, 1);
     rb_define_method(cEC, "dsa_sign_asn1", ossl_ec_key_dsa_sign_asn1, 1);

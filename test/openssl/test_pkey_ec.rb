@@ -189,6 +189,16 @@ class OpenSSL::TestEC < Test::Unit::TestCase
     assert(pem)
   end
 
+  def test_public_pkey
+    ec = OpenSSL::TestUtils::TEST_KEY_EC_P256V1
+    ec_pub = OpenSSL::PKey::EC.new(ec.group)
+    ec_pub.public_key = ec.public_key
+    test_obj = ec.public_pkey
+    assert(!test_obj.private?)
+    assert(test_obj.public?)
+    assert_equal(ec_pub.to_der, test_obj.to_der)
+  end
+
   def test_ec_point_mul
     ec = OpenSSL::TestUtils::TEST_KEY_EC_P256V1
     p1 = ec.public_key
