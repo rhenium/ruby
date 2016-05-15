@@ -1,3 +1,11 @@
+Fri May 20 10:05:44 2016  Kazuki Yamaguchi  <k@rhe.jp>
+
+	* ext/openssl/lib/openssl/bn.rb (inspect): added. BN#inspect should be
+	  implemented. Kernel#inspect used to call #to_s if #to_s is redefined
+	  but no longer in >= Ruby 2.0.0.  [ruby-dev:48217] [Bug #9833]
+
+	* ext/openssl/lib/openssl/x509.rb (X509::Name#inspect): ditto.
+
 Thu May 19 22:00:11 2016  Kazuki Yamaguchi  <k@rhe.jp>
 
 	* ext/openssl/extconf.rb: check the existence of SSL_CTX_clear_options()
