@@ -27,14 +27,6 @@ git reset --hard upstream/trunk
 git fetch origin --progress
 git merge --no-edit --no-ff rhe-tools || exit 2
 while list_branches && echo -n "> " && read line; do
-	if ORIGIN_HEAD=$(git rev-parse "origin/$line"); then
-		LOCAL_HEAD=$(git rev-parse "$line")
-		if [ "x$LOCAL_HEAD" != "x$ORIGIN_HEAD" ]; then
-			echo "origin and local differs?"
-			exit 1
-		fi
-	fi
-
 	echo "merging branch $line"
 	while :; do
 		if git merge --no-edit --no-ff "$line"; then
