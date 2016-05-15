@@ -188,7 +188,6 @@ ossl_x509extfactory_set_crl(VALUE self, VALUE crl)
     return crl;
 }
 
-#ifdef HAVE_X509V3_SET_NCONF
 static VALUE
 ossl_x509extfactory_set_config(VALUE self, VALUE config)
 {
@@ -202,9 +201,6 @@ ossl_x509extfactory_set_config(VALUE self, VALUE config)
 
     return config;
 }
-#else
-#define ossl_x509extfactory_set_config rb_f_notimplement
-#endif
 
 static VALUE
 ossl_x509extfactory_initialize(int argc, VALUE *argv, VALUE self)
@@ -243,12 +239,8 @@ ossl_x509extfactory_create_ext(int argc, VALUE *argv, VALUE self)
     X509_EXTENSION *ext;
     VALUE oid, value, critical, valstr, obj;
     int nid;
-#ifdef HAVE_X509V3_EXT_NCONF_NID
     VALUE rconf;
     CONF *conf;
-#else
-    static LHASH *empty_lhash;
-#endif
 
     rb_scan_args(argc, argv, "21", &oid, &value, &critical);
     StringValue(oid);
@@ -262,14 +254,9 @@ ossl_x509extfactory_create_ext(int argc, VALUE *argv, VALUE self)
     rb_str_append(valstr, value);
     GetX509ExtFactory(self, ctx);
     obj = NewX509Ext(cX509Ext);
-#ifdef HAVE_X509V3_EXT_NCONF_NID
     rconf = rb_iv_get(self, "@config");
     conf = NIL_P(rconf) ? NULL : GetConfigPtr(rconf);
     ext = X509V3_EXT_nconf_nid(conf, ctx, nid, RSTRING_PTR(valstr));
-#else
-    if (!empty_lhash) empty_lhash = lh_new(NULL, NULL);
-    ext = X509V3_EXT_conf_nid(empty_lhash, ctx, nid, RSTRING_PTR(valstr));
-#endif
     if (!ext){
 	ossl_raise(eX509ExtError, "%s = %s",
 		   RSTRING_PTR(oid), RSTRING_PTR(value));
@@ -367,7 +354,7 @@ ossl_x509ext_set_value(VALUE self, VALUE data)
 	OPENSSL_free(s);
 	ossl_raise(eX509ExtError, NULL);
     }
-    if(!M_ASN1_OCTET_STRING_set(asn1s, s, RSTRING_LENINT(data))){
+    if(!ASN1_OCTET_STRING_set(asn1s, (unsigned char *)s, RSTRING_LENINT(data))){
 	OPENSSL_free(s);
 	ASN1_OCTET_STRING_free(asn1s);
 	ossl_raise(eX509ExtError, NULL);
@@ -424,7 +411,7 @@ ossl_x509ext_get_value(VALUE obj)
     if (!(out = BIO_new(BIO_s_mem())))
 	ossl_raise(eX509ExtError, NULL);
     if (!X509V3_EXT_print(out, ext, 0, 0))
-	M_ASN1_OCTET_STRING_print(out, ext->value);
+	ASN1_STRING_print(out, (ASN1_STRING *)X509_EXTENSION_get_data(ext));
     ret = ossl_membio2str(out);
 
     return ret;

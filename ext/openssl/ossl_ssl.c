@@ -84,39 +84,35 @@ static VALUE sym_exception, sym_wait_readable, sym_wait_writable;
  */
 static const struct {
     const char *name;
-    SSL_METHOD *(*func)(void);
+    SSL_METHOD *(*func)(void); /* FIXME: constify when dropping 0.9.8 */
+    int version;
 } ossl_ssl_method_tab[] = {
-#define OSSL_SSL_METHOD_ENTRY(name) { #name, (SSL_METHOD *(*)(void))name##_method }
-    OSSL_SSL_METHOD_ENTRY(TLSv1),
-    OSSL_SSL_METHOD_ENTRY(TLSv1_server),
-    OSSL_SSL_METHOD_ENTRY(TLSv1_client),
-#if defined(HAVE_TLSV1_2_METHOD) && defined(HAVE_TLSV1_2_SERVER_METHOD) && \
-        defined(HAVE_TLSV1_2_CLIENT_METHOD)
-    OSSL_SSL_METHOD_ENTRY(TLSv1_2),
-    OSSL_SSL_METHOD_ENTRY(TLSv1_2_server),
-    OSSL_SSL_METHOD_ENTRY(TLSv1_2_client),
+#if defined(HAVE_SSL_CTX_SET_MIN_PROTO_VERSION)
+/* OpenSSL 1.1.0; version specific method is deprecated */
+#define OSSL_SSL_METHOD_ENTRY(name, version) \
+    { #name,          (SSL_METHOD *(*)(void))TLS_method, version }, \
+    { #name"_server", (SSL_METHOD *(*)(void))TLS_server_method, version }, \
+    { #name"_client", (SSL_METHOD *(*)(void))TLS_client_method, version }
+#else
+#define OSSL_SSL_METHOD_ENTRY(name, version) \
+    { #name,          (SSL_METHOD *(*)(void))name##_method, version }, \
+    { #name"_server", (SSL_METHOD *(*)(void))name##_server_method, version }, \
+    { #name"_client", (SSL_METHOD *(*)(void))name##_client_method, version }
 #endif
-#if defined(HAVE_TLSV1_1_METHOD) && defined(HAVE_TLSV1_1_SERVER_METHOD) && \
-        defined(HAVE_TLSV1_1_CLIENT_METHOD)
-    OSSL_SSL_METHOD_ENTRY(TLSv1_1),
-    OSSL_SSL_METHOD_ENTRY(TLSv1_1_server),
-    OSSL_SSL_METHOD_ENTRY(TLSv1_1_client),
+#if defined(HAVE_SSLV2_METHOD)
+    OSSL_SSL_METHOD_ENTRY(SSLv2, SSL2_VERSION),
 #endif
-#if defined(HAVE_SSLV2_METHOD) && defined(HAVE_SSLV2_SERVER_METHOD) && \
-        defined(HAVE_SSLV2_CLIENT_METHOD)
-    OSSL_SSL_METHOD_ENTRY(SSLv2),
-    OSSL_SSL_METHOD_ENTRY(SSLv2_server),
-    OSSL_SSL_METHOD_ENTRY(SSLv2_client),
+#if defined(HAVE_SSLV3_METHOD)
+    OSSL_SSL_METHOD_ENTRY(SSLv3, SSL3_VERSION),
 #endif
-#if defined(HAVE_SSLV3_METHOD) && defined(HAVE_SSLV3_SERVER_METHOD) && \
-        defined(HAVE_SSLV3_CLIENT_METHOD)
-    OSSL_SSL_METHOD_ENTRY(SSLv3),
-    OSSL_SSL_METHOD_ENTRY(SSLv3_server),
-    OSSL_SSL_METHOD_ENTRY(SSLv3_client),
+    OSSL_SSL_METHOD_ENTRY(TLSv1, TLS1_VERSION),
+#if defined(HAVE_TLSV1_1_METHOD)
+    OSSL_SSL_METHOD_ENTRY(TLSv1_1, TLS1_1_VERSION),
 #endif
-    OSSL_SSL_METHOD_ENTRY(SSLv23),
-    OSSL_SSL_METHOD_ENTRY(SSLv23_server),
-    OSSL_SSL_METHOD_ENTRY(SSLv23_client),
+#if defined(HAVE_TLSV1_2_METHOD)
+    OSSL_SSL_METHOD_ENTRY(TLSv1_2, TLS1_2_VERSION),
+#endif
+    OSSL_SSL_METHOD_ENTRY(SSLv23, 0),
 #undef OSSL_SSL_METHOD_ENTRY
 };
 
@@ -128,8 +124,10 @@ static void
 ossl_sslctx_free(void *ptr)
 {
     SSL_CTX *ctx = ptr;
+#if !defined(HAVE_X509_STORE_UP_REF)
     if(ctx && SSL_CTX_get_ex_data(ctx, ossl_ssl_ex_store_p)== (void*)1)
 	ctx->cert_store = NULL;
+#endif
     SSL_CTX_free(ctx);
 }
 
@@ -175,30 +173,37 @@ ossl_sslctx_s_alloc(VALUE klass)
 static VALUE
 ossl_sslctx_set_ssl_version(VALUE self, VALUE ssl_method)
 {
-    SSL_METHOD *method = NULL;
+    SSL_CTX *ctx;
     const char *s;
     VALUE m = ssl_method;
     int i;
 
-    SSL_CTX *ctx;
+    GetSSLCTX(self, ctx);
     if (RB_TYPE_P(ssl_method, T_SYMBOL))
 	m = rb_sym2str(ssl_method);
     s = StringValueCStr(m);
     for (i = 0; i < numberof(ossl_ssl_method_tab); i++) {
         if (strcmp(ossl_ssl_method_tab[i].name, s) == 0) {
-            method = ossl_ssl_method_tab[i].func();
-            break;
+            SSL_METHOD *method = ossl_ssl_method_tab[i].func();
+#if defined(HAVE_SSL_CTX_SET_MIN_PROTO_VERSION)
+	    int version = ossl_ssl_method_tab[i].version;
+#endif
+
+	    if (SSL_CTX_set_ssl_version(ctx, method) != 1) {
+		ossl_raise(eSSLError, "SSL_CTX_set_ssl_version");
+	    }
+#if defined(HAVE_SSL_CTX_SET_MIN_PROTO_VERSION)
+	    /* having SSL_CTX_set_min_proto_version() means versions specific methods is deprecated */
+	    if (!SSL_CTX_set_min_proto_version(ctx, version) ||
+		!SSL_CTX_set_max_proto_version(ctx, version)) {
+		ossl_raise(eSSLError, "SSL_CTX_set_{min,max}_proto_version");
+	    }
+#endif
+	    return ssl_method;
         }
     }
-    if (!method) {
-        ossl_raise(rb_eArgError, "unknown SSL method `%"PRIsVALUE"'.", m);
-    }
-    GetSSLCTX(self, ctx);
-    if (SSL_CTX_set_ssl_version(ctx, method) != 1) {
-        ossl_raise(eSSLError, "SSL_CTX_set_ssl_version");
-    }
 
-    return ssl_method;
+    ossl_raise(rb_eArgError, "unknown SSL method `%"PRIsVALUE"'.", m);
 }
 
 static VALUE
@@ -244,7 +249,7 @@ ossl_call_tmp_dh_callback(VALUE args)
     if (NIL_P(cb)) return Qfalse;
     dh = rb_apply(cb, rb_intern("call"), args);
     pkey = GetPKeyPtr(dh);
-    if (EVP_PKEY_type(pkey->type) != EVP_PKEY_DH) return Qfalse;
+    if (EVP_PKEY_base_id(pkey) != EVP_PKEY_DH) return Qfalse;
 
     return dh;
 }
@@ -262,11 +267,15 @@ ossl_tmp_dh_callback(SSL *ssl, int is_export, int keylength)
     if (!RTEST(dh)) return NULL;
     ossl_ssl_set_tmp_dh(rb_ssl, dh);
 
-    return GetPKeyPtr(dh)->pkey.dh;
+    return EVP_PKEY_get0_DH(GetPKeyPtr(dh));
 }
 #endif /* OPENSSL_NO_DH */
 
-#if !defined(OPENSSL_NO_EC)
+#if !defined(OPENSSL_NO_EC) && defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
+/*
+ * SSL_CTX_set_tmp_ecdh_callback() is removed in OpenSSL 1.1.0. User should use
+ * SSLContext#set_ecdh_curves instead.
+ */
 static VALUE
 ossl_call_tmp_ecdh_callback(VALUE args)
 {
@@ -278,7 +287,7 @@ ossl_call_tmp_ecdh_callback(VALUE args)
     if (NIL_P(cb)) return Qfalse;
     ecdh = rb_apply(cb, rb_intern("call"), args);
     pkey = GetPKeyPtr(ecdh);
-    if (EVP_PKEY_type(pkey->type) != EVP_PKEY_EC) return Qfalse;
+    if (EVP_PKEY_base_id(pkey) != EVP_PKEY_EC) return Qfalse;
 
     return ecdh;
 }
@@ -296,7 +305,7 @@ ossl_tmp_ecdh_callback(SSL *ssl, int is_export, int keylength)
     if (!RTEST(ecdh)) return NULL;
     ossl_ssl_set_tmp_ecdh(rb_ssl, ecdh);
 
-    return GetPKeyPtr(ecdh)->pkey.ec;
+    return EVP_PKEY_get0_EC_KEY(GetPKeyPtr(ecdh));
 }
 #endif
 
@@ -308,7 +317,7 @@ ossl_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
     ssl = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
     cb = (VALUE)SSL_get_ex_data(ssl, ossl_ssl_ex_vcb_idx);
-    X509_STORE_CTX_set_ex_data(ctx, ossl_verify_cb_idx, (void*)cb);
+    X509_STORE_CTX_set_ex_data(ctx, ossl_store_ctx_ex_verify_cb_idx, (void*)cb);
     return ossl_verify_cb(preverify_ok, ctx);
 }
 
@@ -328,7 +337,11 @@ ossl_call_session_get_cb(VALUE ary)
 
 /* this method is currently only called for servers (in OpenSSL <= 0.9.8e) */
 static SSL_SESSION *
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+ossl_sslctx_session_get_cb(SSL *ssl, const unsigned char *buf, int len, int *copy)
+#else
 ossl_sslctx_session_get_cb(SSL *ssl, unsigned char *buf, int len, int *copy)
+#endif
 {
     VALUE ary, ssl_obj, ret_obj;
     SSL_SESSION *sess;
@@ -385,7 +398,7 @@ ossl_sslctx_session_new_cb(SSL *ssl, SSL_SESSION *sess)
     	return 1;
     ssl_obj = (VALUE)ptr;
     sess_obj = rb_obj_alloc(cSSLSession);
-    CRYPTO_add(&sess->references, 1, CRYPTO_LOCK_SSL_SESSION);
+    SSL_SESSION_up_ref(sess);
     DATA_PTR(sess_obj) = sess;
 
     ary = rb_ary_new2(2);
@@ -434,7 +447,7 @@ ossl_sslctx_session_remove_cb(SSL_CTX *ctx, SSL_SESSION *sess)
     	return;
     sslctx_obj = (VALUE)ptr;
     sess_obj = rb_obj_alloc(cSSLSession);
-    CRYPTO_add(&sess->references, 1, CRYPTO_LOCK_SSL_SESSION);
+    SSL_SESSION_up_ref(sess);
     DATA_PTR(sess_obj) = sess;
 
     ary = rb_ary_new2(2);
@@ -637,15 +650,13 @@ ssl_alpn_select_cb(SSL *ssl, const unsigned char **out, unsigned char *outlen, c
 #endif
 #endif /* HAVE_SSL_CTX_SET_NEXT_PROTO_SELECT_CB || HAVE_SSL_CTX_SET_ALPN_SELECT_CB */
 
-/* This function may serve as the entry point to support further
- * callbacks. */
+/* This function may serve as the entry point to support further callbacks. */
 static void
 ssl_info_cb(const SSL *ssl, int where, int val)
 {
-    int state = SSL_state(ssl);
+    int is_server = SSL_is_server((SSL *)ssl);
 
-    if ((where & SSL_CB_HANDSHAKE_START) &&
-	(state & SSL_ST_ACCEPT)) {
+    if (is_server && (where & SSL_CB_HANDSHAKE_START)) {
 	ssl_renegotiation_cb(ssl);
     }
 }
@@ -697,7 +708,6 @@ ossl_sslctx_setup(VALUE self)
 {
     SSL_CTX *ctx;
     X509 *cert = NULL, *client_ca = NULL;
-    X509_STORE *store;
     EVP_PKEY *key = NULL;
     char *ca_path = NULL, *ca_file = NULL;
     int verify_mode;
@@ -712,22 +722,45 @@ ossl_sslctx_setup(VALUE self)
 #endif
 
 #if !defined(OPENSSL_NO_EC)
-    if (RTEST(ossl_sslctx_get_tmp_ecdh_cb(self))){
-	SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
-    }
+    /*
+     * OpenSSL will use ECDH:
+     * 0.9.8-1.0.1: if a curve (or tmp_ecdh callback) is explicitly set
+     * 1.0.2:       if SSL_CTX_set_ecdh_auto() is called
+     * 1.1.0:       always
+     */
+#if defined(HAVE_SSL_CTX_SET_ECDH_AUTO)
+    /* 1.0.2 / LibreSSL 2.3 case: enable it */
+    if (!SSL_CTX_set_ecdh_auto(ctx, 1))
+	ossl_raise(eSSLError, "SSL_CTX_set_ecdh_auto");
+#else
+    /* -1.0.1 case: enable if SSLContext#set_ecdh_curves is called */
+    /* 1.1.0 case: enable always; nothing to do */
 #endif
+    /* for compatibility */
+    if (RTEST(ossl_sslctx_get_tmp_ecdh_cb(self))){
+	rb_warn("tmp_ecdh_callback is deprecated and will not work with recent "
+		"OpenSSL; use SSLContext#set_ecdh_curves() instead.");
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
+	SSL_CTX_set_tmp_ecdh_callback(ctx, ossl_tmp_ecdh_callback);
+#endif
+    }
+#endif /* OPENSSL_NO_EC */
 
     val = ossl_sslctx_get_cert_store(self);
     if(!NIL_P(val)){
+	X509_STORE *store = GetX509StorePtr(val); /* NO NEED TO DUP */
+	SSL_CTX_set_cert_store(ctx, store);
+#if !defined(HAVE_X509_STORE_UP_REF)
 	/*
          * WORKAROUND:
 	 *   X509_STORE can count references, but
 	 *   X509_STORE_free() doesn't care it.
 	 *   So we won't increment it but mark it by ex_data.
 	 */
-        store = GetX509StorePtr(val); /* NO NEED TO DUP */
-        SSL_CTX_set_cert_store(ctx, store);
         SSL_CTX_set_ex_data(ctx, ossl_ssl_ex_store_p, (void*)1);
+#else /* Fixed in OpenSSL 1.1.0 */
+	X509_STORE_up_ref(store);
+#endif
     }
 
     val = ossl_sslctx_get_extra_cert(self);
@@ -857,7 +890,7 @@ ossl_sslctx_setup(VALUE self)
 }
 
 static VALUE
-ossl_ssl_cipher_to_ary(SSL_CIPHER *cipher)
+ossl_ssl_cipher_to_ary(const SSL_CIPHER *cipher)
 {
     VALUE ary;
     int bits, alg_bits;
@@ -883,7 +916,7 @@ ossl_sslctx_get_ciphers(VALUE self)
 {
     SSL_CTX *ctx;
     STACK_OF(SSL_CIPHER) *ciphers;
-    SSL_CIPHER *cipher;
+    const SSL_CIPHER *cipher;
     VALUE ary;
     int i, num;
 
@@ -892,7 +925,7 @@ ossl_sslctx_get_ciphers(VALUE self)
         rb_warning("SSL_CTX is not initialized.");
         return Qnil;
     }
-    ciphers = ctx->cipher_list;
+    ciphers = SSL_CTX_get_ciphers(ctx);
 
     if (!ciphers)
         return rb_ary_new();
@@ -953,6 +986,124 @@ ossl_sslctx_set_ciphers(VALUE self, VALUE v)
 
     return v;
 }
+
+/*
+ * call-seq:
+ *    ctx.security_level => 0, .., 5
+ *
+ * The security level for this context. This is new in OpenSSL 1.1.0 and
+ * always returns 0 if using older OpenSSL.
+ */
+static VALUE
+ossl_sslctx_get_security_level(VALUE self)
+{
+    SSL_CTX *ctx;
+    int i;
+
+    GetSSLCTX(self, ctx);
+    if (!ctx) {
+	rb_warning("SSL_CTX is not initialized.");
+	return Qnil;
+    }
+
+#if defined(HAVE_SSL_CTX_GET_SECURITY_LEVEL)
+    i = SSL_CTX_get_security_level(ctx);
+#else
+    i = 0;
+#endif
+    return INT2FIX(i);
+}
+
+/*
+ * call-seq:
+ *    ctx.security_level = 0
+ *    ctx.security_level = 5
+ *
+ * Sets the security level for this context. This is new in OpenSSL 1.1.0.
+ * If using older OpenSSL, setting a value other than 0 raises
+ * NotImplementedError.
+ *
+ * See the manpage of SSL_CTX_set_security_level(3) for details.
+ */
+static VALUE
+ossl_sslctx_set_security_level(VALUE self, VALUE v)
+{
+    SSL_CTX *ctx;
+
+    rb_check_frozen(self);
+
+    GetSSLCTX(self, ctx);
+    if (!ctx)
+	ossl_raise(eSSLError, "SSL_CTX is not initialized.");
+
+#if defined(HAVE_SSL_CTX_GET_SECURITY_LEVEL)
+    SSL_CTX_set_security_level(ctx, NUM2INT(v));
+#else
+    if (NUM2INT(v) != 0)
+	ossl_raise(rb_eNotImpError, "setting security level != 0 is not "
+		   "supported in this version of OpenSSL");
+#endif
+
+    return v;
+}
+
+#if !defined(OPENSSL_NO_EC)
+/*
+ * call-seq:
+ *    ctx.set_ecdh_curves("curve1:curve2:curve3") -> self
+ *
+ * Sets the list of supported elliptic curves for this context. The curves are
+ * passed as a string, colon separated list of named curves in preference order.
+ * For example "P-521:P-384:P-256".
+ *
+ * If you are using an newer OpenSSL (1.0.2-):
+ *   For a TLS client the curves are used in the supported elliptic curves
+ *   extension. For a TLS server the curves are used to determine the set of
+ *   shared curves.
+ * If you are using an older OpenSSL (-1.0.1):
+ *   You can set only one curve. For a TLS client this does nothing. The
+ *   supported curves list can't be changed. For a TLS server the specified
+ *   curve is directly used.
+ */
+static VALUE
+ossl_sslctx_set_ecdh_curves(VALUE self, VALUE value)
+{
+    SSL_CTX *ctx;
+    const char *cstr = StringValueCStr(value);
+
+    rb_check_frozen(self);
+    GetSSLCTX(self, ctx);
+    if (!ctx)
+	ossl_raise(eSSLError, "SSL_CTX is not initialized");
+
+#if defined(HAVE_SSL_CTX_SET1_CURVES_LIST)
+    /* OpenSSL 1.0.2 or newer */
+    if (!SSL_CTX_set1_curves_list(ctx, cstr))
+	ossl_raise(eSSLError, NULL);
+#else
+    /* OpenSSL 1.0.1 or older, LibreSSL */
+    if (strstr(cstr, ":")) {
+	ossl_raise(rb_eArgError, "only one curve can be specified");
+    }
+    else {
+	EC_KEY *ecdh;
+	int nid = EC_curve_nist2nid(cstr);
+	if (nid == NID_undef)
+	    nid = OBJ_sn2nid(cstr);
+	if (nid == NID_undef)
+	    nid = OBJ_ln2nid(cstr);
+	if (nid == NID_undef)
+	    ossl_raise(eSSLError, "unknown curve name");
+	ecdh = EC_KEY_new_by_curve_name(nid);
+	if (!ecdh)
+	    ossl_raise(eSSLError, NULL);
+	SSL_CTX_set_tmp_ecdh(ctx, ecdh);
+    }
+#endif
+
+    return self;
+}
+#endif
 
 /*
  *  call-seq:
@@ -2076,6 +2227,7 @@ Init_ossl_ssl(void)
      */
     rb_attr(cSSLContext, rb_intern("client_cert_cb"), 1, 1, Qfalse);
 
+#if defined(HAVE_SSL_CTX_SET_TMP_ECDH_CALLBACK)
     /*
      * A callback invoked when ECDH parameters are required.
      *
@@ -2085,8 +2237,12 @@ Init_ossl_ssl(void)
      *
      * The callback must return an OpenSSL::PKey::EC instance of the correct
      * key length.
+     *
+     * This callback is deprecated and won't work with newer OpenSSL (>= 1.1.0).
+     * Use OpenSSL::SSL::SSLContext#set_ecdh_curves instead.
      */
     rb_attr(cSSLContext, rb_intern("tmp_ecdh_callback"), 1, 1, Qfalse);
+#endif
 
     /*
      * Sets the context in which a session can be reused.  This allows
@@ -2222,6 +2378,11 @@ Init_ossl_ssl(void)
     rb_define_method(cSSLContext, "ssl_version=", ossl_sslctx_set_ssl_version, 1);
     rb_define_method(cSSLContext, "ciphers",     ossl_sslctx_get_ciphers, 0);
     rb_define_method(cSSLContext, "ciphers=",    ossl_sslctx_set_ciphers, 1);
+    rb_define_method(cSSLContext, "security_level", ossl_sslctx_get_security_level, 0);
+    rb_define_method(cSSLContext, "security_level=", ossl_sslctx_set_security_level, 1);
+#if !defined(OPENSSL_NO_EC)
+    rb_define_method(cSSLContext, "set_ecdh_curves", ossl_sslctx_set_ecdh_curves, 1);
+#endif
 
     rb_define_method(cSSLContext, "setup", ossl_sslctx_setup, 0);
 
@@ -2351,25 +2512,17 @@ Init_ossl_ssl(void)
     ossl_ssl_def_const(OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG);
     ossl_ssl_def_const(OP_SSLREF2_REUSE_CERT_TYPE_BUG);
     ossl_ssl_def_const(OP_MICROSOFT_BIG_SSLV3_BUFFER);
-#if defined(SSL_OP_MSIE_SSLV2_RSA_PADDING)
     ossl_ssl_def_const(OP_MSIE_SSLV2_RSA_PADDING);
-#endif
     ossl_ssl_def_const(OP_SSLEAY_080_CLIENT_DH_BUG);
     ossl_ssl_def_const(OP_TLS_D5_BUG);
     ossl_ssl_def_const(OP_TLS_BLOCK_PADDING_BUG);
     ossl_ssl_def_const(OP_DONT_INSERT_EMPTY_FRAGMENTS);
     ossl_ssl_def_const(OP_ALL);
-#if defined(SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION)
     ossl_ssl_def_const(OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-#endif
-#if defined(SSL_OP_SINGLE_ECDH_USE)
     ossl_ssl_def_const(OP_SINGLE_ECDH_USE);
-#endif
     ossl_ssl_def_const(OP_SINGLE_DH_USE);
     ossl_ssl_def_const(OP_EPHEMERAL_RSA);
-#if defined(SSL_OP_CIPHER_SERVER_PREFERENCE)
     ossl_ssl_def_const(OP_CIPHER_SERVER_PREFERENCE);
-#endif
     ossl_ssl_def_const(OP_TLS_ROLLBACK_BUG);
     ossl_ssl_def_const(OP_NO_SSLv2);
     ossl_ssl_def_const(OP_NO_SSLv3);

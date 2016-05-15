@@ -98,7 +98,7 @@ DupX509StorePtr(VALUE obj)
     X509_STORE *store;
 
     SafeGetX509Store(obj, store);
-    CRYPTO_add(&store->references, 1, CRYPTO_LOCK_X509_STORE);
+    X509_STORE_up_ref(store);
 
     return store;
 }
@@ -130,7 +130,7 @@ ossl_x509store_set_vfy_cb(VALUE self, VALUE cb)
     X509_STORE *store;
 
     GetX509Store(self, store);
-    X509_STORE_set_ex_data(store, ossl_verify_cb_idx, (void*)cb);
+    X509_STORE_set_ex_data(store, ossl_store_ex_verify_cb_idx, (void*)cb);
     rb_iv_set(self, "@verify_callback", cb);
 
     return cb;
@@ -149,15 +149,12 @@ ossl_x509store_initialize(int argc, VALUE *argv, VALUE self)
 
 /* BUG: This method takes any number of arguments but appears to ignore them. */
     GetX509Store(self, store);
+#if !defined(HAVE_OPAQUE_OPENSSL)
+    /* TODO: what's this? */
     store->ex_data.sk = NULL;
-    X509_STORE_set_verify_cb_func(store, ossl_verify_cb);
-    ossl_x509store_set_vfy_cb(self, Qnil);
-
-#if (OPENSSL_VERSION_NUMBER < 0x00907000L)
-    rb_iv_set(self, "@flags", INT2FIX(0));
-    rb_iv_set(self, "@purpose", INT2FIX(0));
-    rb_iv_set(self, "@trust", INT2FIX(0));
 #endif
+    X509_STORE_set_verify_cb(store, ossl_verify_cb);
+    ossl_x509store_set_vfy_cb(self, Qnil);
 
     /* last verification status */
     rb_iv_set(self, "@error", Qnil);
@@ -171,15 +168,11 @@ ossl_x509store_initialize(int argc, VALUE *argv, VALUE self)
 static VALUE
 ossl_x509store_set_flags(VALUE self, VALUE flags)
 {
-#if (OPENSSL_VERSION_NUMBER >= 0x00907000L)
     X509_STORE *store;
     long f = NUM2LONG(flags);
 
     GetX509Store(self, store);
     X509_STORE_set_flags(store, f);
-#else
-    rb_iv_set(self, "@flags", flags);
-#endif
 
     return flags;
 }
@@ -187,15 +180,11 @@ ossl_x509store_set_flags(VALUE self, VALUE flags)
 static VALUE
 ossl_x509store_set_purpose(VALUE self, VALUE purpose)
 {
-#if (OPENSSL_VERSION_NUMBER >= 0x00907000L)
     X509_STORE *store;
     int p = NUM2INT(purpose);
 
     GetX509Store(self, store);
     X509_STORE_set_purpose(store, p);
-#else
-    rb_iv_set(self, "@purpose", purpose);
-#endif
 
     return purpose;
 }
@@ -203,15 +192,11 @@ ossl_x509store_set_purpose(VALUE self, VALUE purpose)
 static VALUE
 ossl_x509store_set_trust(VALUE self, VALUE trust)
 {
-#if (OPENSSL_VERSION_NUMBER >= 0x00907000L)
     X509_STORE *store;
     int t = NUM2INT(trust);
 
     GetX509Store(self, store);
     X509_STORE_set_trust(store, t);
-#else
-    rb_iv_set(self, "@trust", trust);
-#endif
 
     return trust;
 }
@@ -400,10 +385,10 @@ static void
 ossl_x509stctx_free(void *ptr)
 {
     X509_STORE_CTX *ctx = ptr;
-    if(ctx->untrusted)
-	sk_X509_pop_free(ctx->untrusted, X509_free);
-    if(ctx->cert)
-	X509_free(ctx->cert);
+    if (X509_STORE_CTX_get0_untrusted(ctx))
+	sk_X509_pop_free(X509_STORE_CTX_get0_untrusted(ctx), X509_free);
+    if (X509_STORE_CTX_get0_cert(ctx))
+	X509_free(X509_STORE_CTX_get0_cert(ctx));
     X509_STORE_CTX_free(ctx);
 }
 
@@ -441,17 +426,10 @@ ossl_x509stctx_initialize(int argc, VALUE *argv, VALUE self)
     SafeGetX509Store(store, x509st);
     if(!NIL_P(cert)) x509 = DupX509CertPtr(cert); /* NEED TO DUP */
     if(!NIL_P(chain)) x509s = ossl_x509_ary2sk(chain);
-#if (OPENSSL_VERSION_NUMBER >= 0x00907000L)
     if(X509_STORE_CTX_init(ctx, x509st, x509, x509s) != 1){
         sk_X509_pop_free(x509s, X509_free);
         ossl_raise(eX509StoreError, NULL);
     }
-#else
-    X509_STORE_CTX_init(ctx, x509st, x509, x509s);
-    ossl_x509stctx_set_flags(self, rb_iv_get(store, "@flags"));
-    ossl_x509stctx_set_purpose(self, rb_iv_get(store, "@purpose"));
-    ossl_x509stctx_set_trust(self, rb_iv_get(store, "@trust"));
-#endif
     if (!NIL_P(t = rb_iv_get(store, "@time")))
 	ossl_x509stctx_set_time(self, t);
     rb_iv_set(self, "@verify_callback", rb_iv_get(store, "@verify_callback"));
@@ -467,7 +445,7 @@ ossl_x509stctx_verify(VALUE self)
     int result;
 
     GetX509StCtx(self, ctx);
-    X509_STORE_CTX_set_ex_data(ctx, ossl_verify_cb_idx,
+    X509_STORE_CTX_set_ex_data(ctx, ossl_store_ctx_ex_verify_cb_idx,
                                (void*)rb_iv_get(self, "@verify_callback"));
     result = X509_verify_cert(ctx);
 
@@ -484,7 +462,7 @@ ossl_x509stctx_get_chain(VALUE self)
     VALUE ary;
 
     GetX509StCtx(self, ctx);
-    if((chain = X509_STORE_CTX_get_chain(ctx)) == NULL){
+    if((chain = X509_STORE_CTX_get0_chain(ctx)) == NULL){
         return Qnil;
     }
     if((num = sk_X509_num(chain)) < 0){
@@ -556,16 +534,15 @@ ossl_x509stctx_get_curr_cert(VALUE self)
 static VALUE
 ossl_x509stctx_get_curr_crl(VALUE self)
 {
-#if (OPENSSL_VERSION_NUMBER >= 0x00907000L)
     X509_STORE_CTX *ctx;
+    X509_CRL *crl;
 
     GetX509StCtx(self, ctx);
-    if(!ctx->current_crl) return Qnil;
+    crl = X509_STORE_CTX_get0_current_crl(ctx);
+    if (!crl)
+	return Qnil;
 
-    return ossl_x509crl_new(ctx->current_crl);
-#else
-    return Qnil;
-#endif
+    return ossl_x509crl_new(crl);
 }
 
 static VALUE

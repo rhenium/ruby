@@ -12,10 +12,6 @@
 
 #include RUBY_EXTCONF_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #if 0
   mOSSL = rb_define_module("OpenSSL");
   mX509 = rb_define_module_under(mOSSL, "X509");
@@ -31,11 +27,6 @@ extern "C" {
 #include <ruby/io.h>
 #include <ruby/thread.h>
 
-/*
- * Check the OpenSSL version
- * The only supported are:
- * 	OpenSSL >= 0.9.7
- */
 #include <openssl/opensslv.h>
 
 #ifdef HAVE_ASSERT_H
@@ -46,7 +37,6 @@ extern "C" {
 
 #if defined(_WIN32) && !defined(LIBRESSL_VERSION_NUMBER)
 #  include <openssl/e_os2.h>
-#  define OSSL_NO_CONF_API 1
 #  if !defined(OPENSSL_SYS_WIN32)
 #    define OPENSSL_SYS_WIN32 1
 #  endif
@@ -54,7 +44,7 @@ extern "C" {
 #endif
 #include <errno.h>
 #include <openssl/err.h>
-#include <openssl/asn1_mac.h>
+#include <openssl/asn1.h>
 #include <openssl/x509v3.h>
 #include <openssl/ssl.h>
 #include <openssl/pkcs12.h>
@@ -63,18 +53,14 @@ extern "C" {
 #include <openssl/rand.h>
 #include <openssl/conf.h>
 #include <openssl/conf_api.h>
+#if !defined(OPENSSL_NO_OCSP)
+#  include <openssl/ocsp.h>
+#endif
 #if !defined(_WIN32)
 #  include <openssl/crypto.h>
 #endif
-#undef X509_NAME
-#undef PKCS7_SIGNER_INFO
-#if defined(HAVE_OPENSSL_ENGINE_H) && defined(HAVE_EVP_CIPHER_CTX_ENGINE)
-#  define OSSL_ENGINE_ENABLED
+#if !defined(OPENSSL_NO_ENGINE)
 #  include <openssl/engine.h>
-#endif
-#if defined(HAVE_OPENSSL_OCSP_H)
-#  define OSSL_OCSP_ENABLED
-#  include <openssl/ocsp.h>
 #endif
 
 /* OpenSSL requires passwords for PEM-encoded files to be at least four
@@ -114,13 +100,6 @@ extern VALUE eOSSLError;
     ossl_raise(rb_eTypeError, "wrong argument type");\
   }\
 } while (0)
-
-/*
- * Compatibility
- */
-#if OPENSSL_VERSION_NUMBER >= 0x10000000L
-#define STACK _STACK
-#endif
 
 /*
  * String to HEXString conversion
@@ -167,7 +146,8 @@ VALUE ossl_exc_new(VALUE, const char *, ...);
 /*
  * Verify callback
  */
-extern int ossl_verify_cb_idx;
+extern int ossl_store_ctx_ex_verify_cb_idx;
+extern int ossl_store_ex_verify_cb_idx;
 
 struct ossl_verify_cb_args {
     VALUE proc;
@@ -240,9 +220,5 @@ void ossl_debug(const char *, ...);
 #include "ossl_engine.h"
 
 void Init_openssl(void);
-
-#if defined(__cplusplus)
-}
-#endif
 
 #endif /* _OSSL_H_ */

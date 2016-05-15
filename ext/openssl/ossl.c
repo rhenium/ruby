@@ -198,7 +198,8 @@ ossl_pem_passwd_cb(char *buf, int max_len, int flag, void *pwd)
 /*
  * Verify callback
  */
-int ossl_verify_cb_idx;
+int ossl_store_ctx_ex_verify_cb_idx;
+int ossl_store_ex_verify_cb_idx;
 
 VALUE
 ossl_call_verify_cb_proc(struct ossl_verify_cb_args *args)
@@ -214,10 +215,10 @@ ossl_verify_cb(int ok, X509_STORE_CTX *ctx)
     struct ossl_verify_cb_args args;
     int state = 0;
 
-    proc = (VALUE)X509_STORE_CTX_get_ex_data(ctx, ossl_verify_cb_idx);
-    if ((void*)proc == 0)
-	proc = (VALUE)X509_STORE_get_ex_data(ctx->ctx, ossl_verify_cb_idx);
-    if ((void*)proc == 0)
+    proc = (VALUE)X509_STORE_CTX_get_ex_data(ctx, ossl_store_ctx_ex_verify_cb_idx);
+    if (!proc)
+	proc = (VALUE)X509_STORE_get_ex_data(X509_STORE_CTX_get0_store(ctx), ossl_store_ex_verify_cb_idx);
+    if (!proc)
 	return ok;
     if (!NIL_P(proc)) {
 	ret = Qfalse;
@@ -297,11 +298,7 @@ ossl_make_error(VALUE exc, const char *fmt, va_list args)
     const char *msg;
     long e;
 
-#ifdef HAVE_ERR_PEEK_LAST_ERROR
     e = ERR_peek_last_error();
-#else
-    e = ERR_peek_error();
-#endif
     if (fmt) {
 	str = rb_vsprintf(fmt, args);
     }
@@ -446,7 +443,7 @@ static VALUE
 ossl_fips_mode_set(VALUE self, VALUE enabled)
 {
 
-#ifdef HAVE_OPENSSL_FIPS
+#ifdef OPENSSL_FIPS
     if (RTEST(enabled)) {
 	int mode = FIPS_mode();
 	if(!mode && !FIPS_mode_set(1)) /* turning on twice leads to an error */
@@ -463,6 +460,7 @@ ossl_fips_mode_set(VALUE self, VALUE enabled)
 #endif
 }
 
+#if !defined(HAVE_OPENSSL_110_THREADING_API)
 /**
  * Stores locks needed for OpenSSL thread safety
  */
@@ -550,6 +548,7 @@ static void Init_ossl_locks(void)
     CRYPTO_set_dynlock_lock_callback(ossl_dyn_lock_callback);
     CRYPTO_set_dynlock_destroy_callback(ossl_dyn_destroy_callback);
 }
+#endif /* !HAVE_OPENSSL_110_THREADING_API */
 
 /*
  * OpenSSL provides SSL, TLS and general purpose cryptography.  It wraps the
@@ -1113,7 +1112,7 @@ Init_openssl(void)
     /*
      * Boolean indicating whether OpenSSL is FIPS-enabled or not
      */
-#ifdef HAVE_OPENSSL_FIPS
+#ifdef OPENSSL_FIPS
     rb_define_const(mOSSL, "OPENSSL_FIPS", Qtrue);
 #else
     rb_define_const(mOSSL, "OPENSSL_FIPS", Qfalse);
@@ -1130,8 +1129,10 @@ Init_openssl(void)
     /*
      * Verify callback Proc index for ext-data
      */
-    if ((ossl_verify_cb_idx = X509_STORE_CTX_get_ex_new_index(0, (void *)"ossl_verify_cb_idx", 0, 0, 0)) < 0)
+    if ((ossl_store_ctx_ex_verify_cb_idx = X509_STORE_CTX_get_ex_new_index(0, (void *)"ossl_store_ctx_ex_verify_cb_idx", 0, 0, 0)) < 0)
         ossl_raise(eOSSLError, "X509_STORE_CTX_get_ex_new_index");
+    if ((ossl_store_ex_verify_cb_idx = X509_STORE_get_ex_new_index(0, (void *)"ossl_store_ex_verify_cb_idx", 0, 0, 0)) < 0)
+        ossl_raise(eOSSLError, "X509_STORE_get_ex_new_index");
 
     /*
      * Init debug core
@@ -1148,7 +1149,9 @@ Init_openssl(void)
      */
     ossl_s_to_der = rb_intern("to_der");
 
+#if !defined(HAVE_OPENSSL_110_THREADING_API)
     Init_ossl_locks();
+#endif
 
     /*
      * Init components

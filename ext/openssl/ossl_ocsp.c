@@ -10,7 +10,7 @@
  */
 #include "ossl.h"
 
-#if defined(OSSL_OCSP_ENABLED)
+#if !defined(OPENSSL_NO_OCSP)
 
 #define NewOCSPReq(klass) \
     TypedData_Wrap_Struct((klass), &ossl_ocsp_request_type, 0)
@@ -708,8 +708,8 @@ ossl_ocspbres_add_status(VALUE self, VALUE cid, VALUE status,
 
     if(!NIL_P(ext)){
 	X509_EXTENSION *x509ext;
-	sk_X509_EXTENSION_pop_free(single->singleExtensions, X509_EXTENSION_free);
-	single->singleExtensions = NULL;
+	while ((x509ext = OCSP_SINGLERESP_delete_ext(single, 0)))
+	    X509_EXTENSION_free(x509ext);
 	for(i = 0; i < RARRAY_LEN(ext); i++){
 	    x509ext = DupX509ExtPtr(RARRAY_AREF(ext, i));
 	    if(!OCSP_SINGLERESP_add_ext(single, x509ext, -1)){
@@ -764,7 +764,7 @@ ossl_ocspbres_get_status(VALUE self)
 	status = OCSP_single_get0_status(single, &reason, &revtime,
 					 &thisupd, &nextupd);
 	if(status < 0) continue;
-	if(!(cid = OCSP_CERTID_dup(single->certId)))
+	if(!(cid = OCSP_CERTID_dup(OCSP_SINGLERESP_get0_id(single))))
 	    ossl_raise(eOCSPError, NULL);
 	ary = rb_ary_new();
 	rb_ary_push(ary, ossl_ocspcertid_new(cid));
@@ -963,10 +963,12 @@ static VALUE
 ossl_ocspcid_get_serial(VALUE self)
 {
     OCSP_CERTID *id;
+    ASN1_INTEGER *serial;
 
     GetOCSPCertId(self, id);
+    OCSP_id_get0_info(NULL, NULL, NULL, &serial, id);
 
-    return asn1integer_to_num(id->serialNumber);
+    return asn1integer_to_num(serial);
 }
 
 void
@@ -1250,7 +1252,7 @@ Init_ossl_ocsp(void)
     rb_define_const(mOCSP, "V_RESPID_KEY", INT2NUM(V_OCSP_RESPID_KEY));
 }
 
-#else /* ! OSSL_OCSP_ENABLED */
+#else
 void
 Init_ossl_ocsp(void)
 {

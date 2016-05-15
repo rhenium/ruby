@@ -178,14 +178,6 @@ ossl_x509attr_get_oid(VALUE self)
     return ret;
 }
 
-#if defined(HAVE_ST_X509_ATTRIBUTE_SINGLE) || defined(HAVE_ST_SINGLE)
-#  define OSSL_X509ATTR_IS_SINGLE(attr)  ((attr)->single)
-#  define OSSL_X509ATTR_SET_SINGLE(attr) ((attr)->single = 1)
-#else
-#  define OSSL_X509ATTR_IS_SINGLE(attr)  (!(attr)->value.set)
-#  define OSSL_X509ATTR_SET_SINGLE(attr) ((attr)->value.set = 0)
-#endif
-
 /*
  * call-seq:
  *    attr.value = asn1 => asn1
@@ -194,21 +186,38 @@ static VALUE
 ossl_x509attr_set_value(VALUE self, VALUE value)
 {
     X509_ATTRIBUTE *attr;
-    ASN1_TYPE *a1type;
+    VALUE asn1_value;
+    int i, asn1_tag;
 
-    if(!(a1type = ossl_asn1_get_asn1type(value)))
-	ossl_raise(eASN1Error, "could not get ASN1_TYPE");
-    if(ASN1_TYPE_get(a1type) == V_ASN1_SEQUENCE){
-	ASN1_TYPE_free(a1type);
-	ossl_raise(eASN1Error, "couldn't set SEQUENCE for attribute value.");
-    }
+    OSSL_Check_Kind(value, cASN1Data);
+    asn1_value = rb_attr_get(value, rb_intern("@value"));
+    asn1_tag = NUM2INT(rb_attr_get(value, rb_intern("@tag")));
+    if (asn1_tag != V_ASN1_SET)
+	ossl_raise(eASN1Error, "argument must be a SET");
+    if (!rb_obj_is_kind_of(asn1_value, rb_cArray))
+	ossl_raise(eASN1Error, "ASN1::Set has non-array value (bug)");
+
     GetX509Attr(self, attr);
-    if(attr->value.set){
-	if(OSSL_X509ATTR_IS_SINGLE(attr)) ASN1_TYPE_free(attr->value.single);
-	else sk_ASN1_TYPE_free(attr->value.set);
+    if (X509_ATTRIBUTE_count(attr)) {
+	/* populated, reset first */
+	ASN1_OBJECT *obj = X509_ATTRIBUTE_get0_object(attr);
+	X509_ATTRIBUTE *new_attr = X509_ATTRIBUTE_new();
+	if (!new_attr)
+	    ossl_raise(eX509AttrError, NULL);
+	SetX509Attr(self, new_attr);
+	X509_ATTRIBUTE_set1_object(new_attr, obj);
+	X509_ATTRIBUTE_free(attr);
+	attr = new_attr;
     }
-    OSSL_X509ATTR_SET_SINGLE(attr);
-    attr->value.single = a1type;
+
+    for (i = 0; i < RARRAY_LEN(asn1_value); i++) {
+	int ret;
+	ASN1_TYPE *a1type = ossl_asn1_get_asn1type(RARRAY_AREF(asn1_value, i));
+	ret = X509_ATTRIBUTE_set1_data(attr, ASN1_TYPE_get(a1type), a1type->value.ptr, -1);
+	ASN1_TYPE_free(a1type);
+	if (!ret)
+	    ossl_raise(eX509AttrError, NULL);
+    }
 
     return value;
 }
@@ -221,32 +230,29 @@ static VALUE
 ossl_x509attr_get_value(VALUE self)
 {
     X509_ATTRIBUTE *attr;
-    VALUE str, asn1;
-    long length;
+    VALUE str;
     unsigned char *p;
+    STACK_OF(ASN1_TYPE) *sk;
+    int i, count;
+
+    /* there is no X509_ATTRIBUTE_get0_set() function.. */
+    sk = sk_ASN1_TYPE_new_null();
+    if (!sk)
+	ossl_raise(eX509AttrError, "sk_new() failed");
 
     GetX509Attr(self, attr);
-    if(attr->value.ptr == NULL) return Qnil;
-    if(OSSL_X509ATTR_IS_SINGLE(attr)){
-	length = i2d_ASN1_TYPE(attr->value.single, NULL);
-	str = rb_str_new(0, length);
-	p = (unsigned char *)RSTRING_PTR(str);
-	i2d_ASN1_TYPE(attr->value.single, &p);
-	ossl_str_adjust(str, p);
-    }
-    else{
-	length = i2d_ASN1_SET_OF_ASN1_TYPE(attr->value.set,
-			(unsigned char **) NULL, i2d_ASN1_TYPE,
-			V_ASN1_SET, V_ASN1_UNIVERSAL, 0);
-	str = rb_str_new(0, length);
-	p = (unsigned char *)RSTRING_PTR(str);
-	i2d_ASN1_SET_OF_ASN1_TYPE(attr->value.set, &p,
-			i2d_ASN1_TYPE, V_ASN1_SET, V_ASN1_UNIVERSAL, 0);
-	ossl_str_adjust(str, p);
-    }
-    asn1 = rb_funcall(mASN1, rb_intern("decode"), 1, str);
+    count = X509_ATTRIBUTE_count(attr);
+    for (i = 0; i < count; i++)
+	sk_ASN1_TYPE_push(sk, X509_ATTRIBUTE_get0_type(attr, i));
 
-    return asn1;
+    str = rb_str_new(0, i2d_ASN1_SET_ANY(sk, NULL));
+    p = (unsigned char *)RSTRING_PTR(str);
+    i2d_ASN1_SET_ANY(sk, &p);
+    ossl_str_adjust(str, p);
+
+    sk_ASN1_TYPE_free(sk);
+
+    return rb_funcall(mASN1, rb_intern("decode"), 1, str);
 }
 
 /*
@@ -268,7 +274,7 @@ ossl_x509attr_to_der(VALUE self)
     p = (unsigned char *)RSTRING_PTR(str);
     if(i2d_X509_ATTRIBUTE(attr, &p) <= 0)
 	ossl_raise(eX509AttrError, NULL);
-    rb_str_set_len(str, p - (unsigned char*)RSTRING_PTR(str));
+    ossl_str_adjust(str, p);
 
     return str;
 }

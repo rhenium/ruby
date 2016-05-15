@@ -20,20 +20,6 @@ ID id_private_q;
 /*
  * callback for generating keys
  */
-void
-ossl_generate_cb(int p, int n, void *arg)
-{
-    VALUE ary;
-
-    ary = rb_ary_new2(2);
-    rb_ary_store(ary, 0, INT2NUM(p));
-    rb_ary_store(ary, 1, INT2NUM(n));
-
-    rb_yield(ary);
-}
-
-#if HAVE_BN_GENCB
-/* OpenSSL 2nd version of GN generation callback */
 int
 ossl_generate_cb_2(int p, int n, BN_GENCB *cb)
 {
@@ -41,7 +27,7 @@ ossl_generate_cb_2(int p, int n, BN_GENCB *cb)
     struct ossl_generate_cb_arg *arg;
     int state;
 
-    arg = (struct ossl_generate_cb_arg *)cb->arg;
+    arg = (struct ossl_generate_cb_arg *)BN_GENCB_get_arg(cb);
     if (arg->yield) {
 	ary = rb_ary_new2(2);
 	rb_ary_store(ary, 0, INT2NUM(p));
@@ -66,7 +52,6 @@ ossl_generate_cb_stop(void *ptr)
     struct ossl_generate_cb_arg *arg = (struct ossl_generate_cb_arg *)ptr;
     arg->stop = 1;
 }
-#endif
 
 static void
 ossl_evp_pkey_free(void *ptr)
@@ -91,7 +76,7 @@ ossl_pkey_new(EVP_PKEY *pkey)
     if (!pkey) {
 	ossl_raise(ePKeyError, "Cannot make new key from NULL.");
     }
-    switch (EVP_PKEY_type(pkey->type)) {
+    switch (EVP_PKEY_base_id(pkey)) {
 #if !defined(OPENSSL_NO_RSA)
     case EVP_PKEY_RSA:
 	return ossl_rsa_new(pkey);
@@ -212,7 +197,7 @@ DupPKeyPtr(VALUE obj)
     EVP_PKEY *pkey;
 
     SafeGetPKey(obj, pkey);
-    CRYPTO_add(&pkey->references, 1, CRYPTO_LOCK_EVP_PKEY);
+    EVP_PKEY_up_ref(pkey);
 
     return pkey;
 }
@@ -226,7 +211,7 @@ DupPrivPKeyPtr(VALUE obj)
 	ossl_raise(rb_eArgError, "Private key is needed.");
     }
     SafeGetPKey(obj, pkey);
-    CRYPTO_add(&pkey->references, 1, CRYPTO_LOCK_EVP_PKEY);
+    EVP_PKEY_up_ref(pkey);
 
     return pkey;
 }
@@ -286,21 +271,22 @@ static VALUE
 ossl_pkey_sign(VALUE self, VALUE digest, VALUE data)
 {
     EVP_PKEY *pkey;
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     unsigned int buf_len;
     VALUE str;
     int result;
 
-    if (rb_funcallv(self, id_private_q, 0, NULL) != Qtrue) {
+    if (rb_funcallv(self, id_private_q, 0, NULL) != Qtrue)
 	ossl_raise(rb_eArgError, "Private key is needed.");
-    }
+    if (!ctx)
+	ossl_raise(rb_eRuntimeError, "EVP_MD_CTX_new() failed");
     GetPKey(self, pkey);
-    EVP_SignInit(&ctx, GetDigestPtr(digest));
+    EVP_SignInit(ctx, GetDigestPtr(digest));
     StringValue(data);
-    EVP_SignUpdate(&ctx, RSTRING_PTR(data), RSTRING_LEN(data));
+    EVP_SignUpdate(ctx, RSTRING_PTR(data), RSTRING_LEN(data));
     str = rb_str_new(0, EVP_PKEY_size(pkey)+16);
-    result = EVP_SignFinal(&ctx, (unsigned char *)RSTRING_PTR(str), &buf_len, pkey);
-    EVP_MD_CTX_cleanup(&ctx);
+    result = EVP_SignFinal(ctx, (unsigned char *)RSTRING_PTR(str), &buf_len, pkey);
+    EVP_MD_CTX_free(ctx);
     if (!result)
 	ossl_raise(ePKeyError, NULL);
     assert((long)buf_len <= RSTRING_LEN(str));
@@ -334,16 +320,18 @@ static VALUE
 ossl_pkey_verify(VALUE self, VALUE digest, VALUE sig, VALUE data)
 {
     EVP_PKEY *pkey;
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     int result;
 
+    if (!ctx)
+	ossl_raise(rb_eRuntimeError, "EVP_MD_CTX_new() failed");
     GetPKey(self, pkey);
     StringValue(sig);
     StringValue(data);
-    EVP_VerifyInit(&ctx, GetDigestPtr(digest));
-    EVP_VerifyUpdate(&ctx, RSTRING_PTR(data), RSTRING_LEN(data));
-    result = EVP_VerifyFinal(&ctx, (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), pkey);
-    EVP_MD_CTX_cleanup(&ctx);
+    EVP_VerifyInit(ctx, GetDigestPtr(digest));
+    EVP_VerifyUpdate(ctx, RSTRING_PTR(data), RSTRING_LEN(data));
+    result = EVP_VerifyFinal(ctx, (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), pkey);
+    EVP_MD_CTX_free(ctx);
     switch (result) {
     case 0:
 	return Qfalse;
