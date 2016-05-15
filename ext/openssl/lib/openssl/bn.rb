@@ -23,6 +23,10 @@ module OpenSSL
         q.text to_i.to_s
       }
     end
+
+    def inspect
+      "#<#{self.class} #{to_s}>"
+    end
   end # BN
 end # OpenSSL
 

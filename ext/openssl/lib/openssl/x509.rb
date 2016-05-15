@@ -152,6 +152,10 @@ module OpenSSL
           q.text to_s(OpenSSL::X509::Name::RFC2253)
         }
       end
+
+      def inspect
+        "#<#{self.class} #{to_s(RFC2253)}>"
+      end
     end
 
     class StoreContext
