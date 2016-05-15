@@ -1536,6 +1536,7 @@ rb_iseq_disasm(const rb_iseq_t *iseq)
 	    VALUE name = id_to_name(tbl[i], 0);
 	    char argi[0x100] = "";
 	    char opti[0x100] = "";
+	    char kwarg[0x100] = "";
 
 	    if (iseq->body->param.flags.has_opt) {
 		int argc = iseq->body->param.lead_num;
@@ -1546,12 +1547,28 @@ rb_iseq_disasm(const rb_iseq_t *iseq)
 		}
 	    }
 
-	    snprintf(argi, sizeof(argi), "%s%s%s%s%s",	/* arg, opts, rest, post  block */
+	    if (iseq->body->param.flags.has_kw) {
+		const struct rb_iseq_param_keyword *kw = iseq->body->param.keyword;
+		if (kw->bits_start - kw->num <= li && li < kw->bits_start) {
+		    if (kw->bits_start - kw->required_num <= li) {
+			/* have default value */
+			snprintf(kwarg, sizeof(kwarg), "Kw=%"PRIdVALUE,
+				 kw->default_values[i - kw->bits_start + kw->required_num]);
+		    } else if (kw->bits_start - kw->num <= li) {
+			/* required kwarg */
+			strcpy(kwarg, "Kw");
+		    }
+		}
+	    }
+
+	    snprintf(argi, sizeof(argi), "%s%s%s%s%s%s%s",	/* arg, opts, rest, post, block, kw, kwrest */
 		     iseq->body->param.lead_num > li ? "Arg" : "",
 		     opti,
 		     (iseq->body->param.flags.has_rest && iseq->body->param.rest_start == li) ? "Rest" : "",
 		     (iseq->body->param.flags.has_post && iseq->body->param.post_start <= li && li < iseq->body->param.post_start + iseq->body->param.post_num) ? "Post" : "",
-		     (iseq->body->param.flags.has_block && iseq->body->param.block_start == li) ? "Block" : "");
+		     (iseq->body->param.flags.has_block && iseq->body->param.block_start == li) ? "Block" : "",
+		     kwarg,
+		     (iseq->body->param.flags.has_kwrest && iseq->body->param.keyword->rest_start == li) ? "Kwrest" : "");
 
 	    rb_str_catf(str, "[%2d] ", iseq->body->local_size - i);
 	    width = RSTRING_LEN(str) + 11;

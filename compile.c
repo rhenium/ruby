@@ -1243,34 +1243,23 @@ get_dyna_var_idx(const rb_iseq_t *iseq, ID id, int *level, int *ls)
 static void
 iseq_calc_param_size(rb_iseq_t *iseq)
 {
-    if (iseq->body->param.flags.has_opt ||
-	iseq->body->param.flags.has_post ||
-	iseq->body->param.flags.has_rest ||
-	iseq->body->param.flags.has_block ||
-	iseq->body->param.flags.has_kw ||
-	iseq->body->param.flags.has_kwrest) {
-
-	if (iseq->body->param.flags.has_block) {
-	    iseq->body->param.size = iseq->body->param.block_start + 1;
-	}
-	else if (iseq->body->param.flags.has_kwrest) {
-	    iseq->body->param.size = iseq->body->param.keyword->rest_start + 1;
-	}
-	else if (iseq->body->param.flags.has_kw) {
-	    iseq->body->param.size = iseq->body->param.keyword->bits_start + 1;
-	}
-	else if (iseq->body->param.flags.has_post) {
-	    iseq->body->param.size = iseq->body->param.post_start + iseq->body->param.post_num;
-	}
-	else if (iseq->body->param.flags.has_rest) {
-	    iseq->body->param.size = iseq->body->param.rest_start + 1;
-	}
-	else if (iseq->body->param.flags.has_opt) {
-	    iseq->body->param.size = iseq->body->param.lead_num + iseq->body->param.opt_num;
-	}
-	else {
-	    rb_bug("unreachable");
-	}
+    if (iseq->body->param.flags.has_block) {
+	iseq->body->param.size = iseq->body->param.block_start + 1;
+    }
+    else if (iseq->body->param.flags.has_kwrest) {
+	iseq->body->param.size = iseq->body->param.keyword->rest_start + 1;
+    }
+    else if (iseq->body->param.flags.has_kw) {
+	iseq->body->param.size = iseq->body->param.keyword->bits_start + 1;
+    }
+    else if (iseq->body->param.flags.has_post) {
+	iseq->body->param.size = iseq->body->param.post_start + iseq->body->param.post_num;
+    }
+    else if (iseq->body->param.flags.has_rest) {
+	iseq->body->param.size = iseq->body->param.rest_start + 1;
+    }
+    else if (iseq->body->param.flags.has_opt) {
+	iseq->body->param.size = iseq->body->param.lead_num + iseq->body->param.opt_num;
     }
     else {
 	iseq->body->param.size = iseq->body->param.lead_num;
