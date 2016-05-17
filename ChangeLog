@@ -1,3 +1,28 @@
+Wed May 18 01:01:55 2016  Kazuki Yamaguchi  <k@rhe.jp>
+
+	* ext/openssl/ossl.c (ossl_clear_error): extracted from
+	  ossl_make_error().This prints errors in the OpenSSL error queue and
+	  clears it. We should not clear the queue without reporting, as it
+	  makes debugging difficult.
+	  (ossl_make_error): use ossl_clear_error().
+
+	* ext/openssl/ossl.h: add prototype declaration of ossl_make_error().
+	  (OSSL_BIO_reset) use ossl_clear_error() to clear the queue.
+
+	* ext/openssl/ossl_engine.c (ossl_engine_s_by_id): use
+	  ossl_clear_error() instead of ERR_clear_error().
+
+	* ext/openssl/ossl_ns_spki.c (ossl_spki_initialize): ditto.
+
+	* ext/openssl/ossl_pkcs7.c (ossl_pkcs7_verify): ditto.
+
+	* ext/openssl/ossl_pkey_dsa.c (ossl_dsa_initialize): ditto.
+
+	* ext/openssl/ossl_pkey_ec.c (ossl_ec_key_initialize): ditto.
+	  (ossl_ec_group_initialize): ditto.
+
+	* ext/openssl/ossl_ssl.c (ossl_ssl_shutdown): ditto.
+
 Tue May 18 00:05:00 2016  Kenta Murata  <mrkn@mrkn.jp>
 
 	* enum.c (enum_sum): Optimize for a range from int to int.
