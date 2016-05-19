@@ -571,16 +571,12 @@ ossl_cipher_set_auth_data(VALUE self, VALUE data)
 static VALUE
 ossl_get_gcm_auth_tag(EVP_CIPHER_CTX *ctx, int len)
 {
-    unsigned char *tag;
     VALUE ret;
 
-    tag = ALLOC_N(unsigned char, len);
+    ret = rb_str_new(NULL, len);
+    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, len, RSTRING_PTR(ret)))
+	ossl_raise(eCipherError, "retrieving the authentication tag failed");
 
-    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, len, tag))
-        ossl_raise(eCipherError, "retrieving the authentication tag failed");
-
-    ret = rb_str_new((const char *) tag, len);
-    xfree(tag);
     return ret;
 }
 
