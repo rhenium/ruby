@@ -1028,6 +1028,24 @@ if OpenSSL::SSL::SSLContext::METHODS.include? :TLSv1_2
     }
   end if defined?(OpenSSL::SSL::OP_NO_TLSv1_2)
 
+  def test_min_max_version
+    ctx_svr = -> ctx { ctx.min_version = :TLSv1_1 }
+    start_server(OpenSSL::SSL::VERIFY_NONE, true, ctx_proc: ctx_svr, ignore_listener_error: true) do |server, port|
+      ctx1 = OpenSSL::SSL::SSLContext.new.tap { |c| c.max_version = :TLSv1_1 } # smin == cmax
+      server_connect(port, ctx1)
+      ctx2 = OpenSSL::SSL::SSLContext.new.tap { |c| c.max_version = :TLSv1 } # smin > cmax
+      assert_raise(*HANDSHAKE_ERRORS) { server_connect(port, ctx2) }
+    end
+
+    ctx_svr = -> ctx { ctx.max_version = :TLSv1_1 }
+    start_server(OpenSSL::SSL::VERIFY_NONE, true, ctx_proc: ctx_svr, ignore_listener_error: true) do |server, port|
+      ctx1 = OpenSSL::SSL::SSLContext.new.tap { |c| c.min_version = :TLSv1_1 } # smax == cmin
+      server_connect(port, ctx1)
+      ctx2 = OpenSSL::SSL::SSLContext.new.tap { |c| c.min_version = :TLSv1_2 } # smax < cmin
+      assert_raise(*HANDSHAKE_ERRORS) { server_connect(port, ctx2) }
+    end
+  end
+
 end
 
   def test_renegotiation_cb

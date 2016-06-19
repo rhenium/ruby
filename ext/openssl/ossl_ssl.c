@@ -15,8 +15,6 @@
 #  include <unistd.h> /* for read(), and write() */
 #endif
 
-#define numberof(ary) (int)(sizeof(ary)/sizeof((ary)[0]))
-
 #ifdef _WIN32
 #  define TO_SOCKET(s) _get_osfhandle(s)
 #else
@@ -49,6 +47,8 @@ static VALUE eSSLErrorWaitWritable;
 #define ossl_sslctx_set_extra_cert(o,v)  	rb_iv_set((o),"@extra_chain_cert",(v))
 #define ossl_sslctx_set_client_cert_cb(o,v) 	rb_iv_set((o),"@client_cert_cb",(v))
 #define ossl_sslctx_set_sess_id_ctx(o, v) 	rb_iv_set((o),"@session_id_context",(v))
+#define ossl_sslctx_set_min_version(o, v)	rb_iv_set((o),"@min_version",(v))
+#define ossl_sslctx_set_max_version(o, v)	rb_iv_set((o),"@max_version",(v))
 
 #define ossl_sslctx_get_cert(o)          	rb_iv_get((o),"@cert")
 #define ossl_sslctx_get_key(o)           	rb_iv_get((o),"@key")
@@ -64,6 +64,8 @@ static VALUE eSSLErrorWaitWritable;
 #define ossl_sslctx_get_client_cert_cb(o) 	rb_iv_get((o),"@client_cert_cb")
 #define ossl_sslctx_get_tmp_ecdh_cb(o)          rb_iv_get((o),"@tmp_ecdh_callback")
 #define ossl_sslctx_get_sess_id_ctx(o)   	rb_iv_get((o),"@session_id_context")
+#define ossl_sslctx_get_min_version(o)		rb_iv_get((o),"@min_version")
+#define ossl_sslctx_get_max_version(o)		rb_iv_get((o),"@max_version")
 
 #define ossl_ssl_get_io(o)           rb_iv_get((o),"@io")
 #define ossl_ssl_get_ctx(o)          rb_iv_get((o),"@context")
@@ -88,35 +90,26 @@ static VALUE sym_exception, sym_wait_readable, sym_wait_writable;
  */
 static const struct {
     const char *name;
-    SSL_METHOD *(*func)(void); /* FIXME: constify when dropping 0.9.8 */
     int version;
-} ossl_ssl_method_tab[] = {
-#if defined(HAVE_SSL_CTX_SET_MIN_PROTO_VERSION)
-#define OSSL_SSL_METHOD_ENTRY(name, version) \
-    { #name,          (SSL_METHOD *(*)(void))TLS_method, version }, \
-    { #name"_server", (SSL_METHOD *(*)(void))TLS_server_method, version }, \
-    { #name"_client", (SSL_METHOD *(*)(void))TLS_client_method, version }
-#else
-#define OSSL_SSL_METHOD_ENTRY(name, version) \
-    { #name,          (SSL_METHOD *(*)(void))name##_method, version }, \
-    { #name"_server", (SSL_METHOD *(*)(void))name##_server_method, version }, \
-    { #name"_client", (SSL_METHOD *(*)(void))name##_client_method, version }
-#endif
+    unsigned long option_value;
+} ssl_version_tab[] = {
+    { "SSLv23",  0,              0 },
+    { "TLS",     0,              0 },
 #if defined(HAVE_SSLV2_METHOD)
-    OSSL_SSL_METHOD_ENTRY(SSLv2, SSL2_VERSION),
+    { "SSLv2",   SSL2_VERSION,   SSL_OP_NO_SSLv2 },
 #endif
 #if defined(HAVE_SSLV3_METHOD)
-    OSSL_SSL_METHOD_ENTRY(SSLv3, SSL3_VERSION),
+    { "SSLv3",   SSL3_VERSION,   SSL_OP_NO_SSLv3 },
 #endif
-    OSSL_SSL_METHOD_ENTRY(TLSv1, TLS1_VERSION),
+#if defined(HAVE_TLSV1_METHOD)
+    { "TLSv1",   TLS1_VERSION,   SSL_OP_NO_TLSv1 },
+#endif
 #if defined(HAVE_TLSV1_1_METHOD)
-    OSSL_SSL_METHOD_ENTRY(TLSv1_1, TLS1_1_VERSION),
+    { "TLSv1_1", TLS1_1_VERSION, SSL_OP_NO_TLSv1_1 },
 #endif
 #if defined(HAVE_TLSV1_2_METHOD)
-    OSSL_SSL_METHOD_ENTRY(TLSv1_2, TLS1_2_VERSION),
+    { "TLSv1_2", TLS1_2_VERSION, SSL_OP_NO_TLSv1_2 },
 #endif
-    OSSL_SSL_METHOD_ENTRY(SSLv23, 0),
-#undef OSSL_SSL_METHOD_ENTRY
 };
 
 static int ossl_ssl_ex_vcb_idx;
@@ -180,44 +173,134 @@ ossl_sslctx_s_alloc(VALUE klass)
 
 /*
  * call-seq:
- *    ctx.ssl_version = :TLSv1
- *    ctx.ssl_version = "SSLv23_client"
- *
- * You can get a list of valid versions with OpenSSL::SSL::SSLContext::METHODS
+ *    context.method_mode = :client
+ *    context.method_mode = :server
+ *    context.method_mode = nil
  */
 static VALUE
-ossl_sslctx_set_ssl_version(VALUE self, VALUE ssl_method)
+ossl_sslctx_set_method_mode(VALUE self, VALUE mode)
 {
     SSL_CTX *ctx;
-    const char *s;
-    VALUE m = ssl_method;
-    int i;
+    const SSL_METHOD *method;
+
+    if (NIL_P(mode))
+	method = TLS_method();
+    else if (SYM2ID(mode) == rb_intern("client"))
+	method = TLS_client_method();
+    else if (SYM2ID(mode) == rb_intern("server"))
+	method = TLS_server_method();
+    else
+	ossl_raise(rb_eArgError, "unknown SSL method mode `%"PRIsVALUE"'", mode);
 
     GetSSLCTX(self, ctx);
-    if (RB_TYPE_P(ssl_method, T_SYMBOL))
-	m = rb_sym2str(ssl_method);
-    s = StringValueCStr(m);
-    for (i = 0; i < numberof(ossl_ssl_method_tab); i++) {
-        if (strcmp(ossl_ssl_method_tab[i].name, s) == 0) {
-#if defined(HAVE_SSL_CTX_SET_MIN_PROTO_VERSION)
-	    int version = ossl_ssl_method_tab[i].version;
-#endif
-	    SSL_METHOD *method = ossl_ssl_method_tab[i].func();
+    /* FIXME: remove cast when dropping OpenSSL 0.9.8 */
+    if (!SSL_CTX_set_ssl_version(ctx, (SSL_METHOD *)method))
+	ossl_raise(eSSLError, "SSL_CTX_set_ssl_version");
 
-	    if (SSL_CTX_set_ssl_version(ctx, method) != 1)
-		ossl_raise(eSSLError, "SSL_CTX_set_ssl_version");
+    return mode;
+}
 
-#if defined(HAVE_SSL_CTX_SET_MIN_PROTO_VERSION)
-	    if (!SSL_CTX_set_min_proto_version(ctx, version))
-		ossl_raise(eSSLError, "SSL_CTX_set_min_proto_version");
-	    if (!SSL_CTX_set_max_proto_version(ctx, version))
-		ossl_raise(eSSLError, "SSL_CTX_set_max_proto_version");
-#endif
-	    return ssl_method;
-        }
+static int
+parse_proto_version(VALUE str)
+{
+    char *cstr;
+    int i;
+
+    if (NIL_P(str))
+	return 0;
+    if (SYMBOL_P(str))
+	str = rb_sym2str(str);
+
+    cstr = StringValueCStr(str);
+    for (i = 0; i < (int)(sizeof(ssl_version_tab) / sizeof(ssl_version_tab[0])); i++) {
+	if (!strcmp(ssl_version_tab[i].name, cstr))
+	    return ssl_version_tab[i].version;
     }
 
-    ossl_raise(rb_eArgError, "unknown SSL method `%"PRIsVALUE"'.", m);
+    ossl_raise(rb_eArgError, "unknown protocol version `%"PRIsVALUE"'.", str);
+}
+
+static void
+set_ssl_version_bound(VALUE self, VALUE min_v, VALUE max_v)
+{
+    SSL_CTX *ctx;
+    int min, max;
+#if !defined(HAVE_SSL_CTX_SET_MIN_PROTO_VERSION)
+    int i;
+    unsigned long opts = 0;
+#endif
+
+    GetSSLCTX(self, ctx);
+    min = parse_proto_version(min_v);
+    max = parse_proto_version(max_v);
+
+#if defined(HAVE_SSL_CTX_SET_MIN_PROTO_VERSION)
+    if (!SSL_CTX_set_min_proto_version(ctx, min))
+	ossl_raise(eSSLError, "SSL_CTX_set_min_proto_version");
+    if (!SSL_CTX_set_max_proto_version(ctx, max))
+	ossl_raise(eSSLError, "SSL_CTX_set_max_proto_version");
+#else
+    for (i = 0; i < (int)(sizeof(ssl_version_tab) / sizeof(ssl_version_tab[0])); i++) {
+	if (min && min > ssl_version_tab[i].version ||
+	    max && max < ssl_version_tab[i].version)
+	    opts |= ssl_version_tab[i].option_value;
+    }
+
+    SSL_CTX_clear_options(ctx, SSL_OP_NO_SSL_MASK);
+    SSL_CTX_set_options(ctx, opts);
+#endif
+
+    ossl_sslctx_set_min_version(self, min_v);
+    ossl_sslctx_set_max_version(self, max_v);
+}
+
+/*
+ * call-seq:
+ *   ctx.min_version = :TLSv1_1
+ *   ctx.min_version = nil
+ *
+ * Sets the lower bound on the supported SSL/TLS protocol version. The version
+ * may be one of these (depending on the version of OpenSSL):
+ *
+ * :SSLv2   :: SSL 2.0
+ * :SSLv3   :: SSL 3.0
+ * :TLSv1   :: TLS 1.0
+ * :TLSv1_1 :: TLS 1.1
+ * :TLSv1_2 :: TLS 1.2
+ * nil      :: Any version
+ *
+ * Note that this may clear the OpenSSL::SSL::OP_NO_{SSL,TLS}v* options.
+ *
+ * === Example
+ *   ctx = OpenSSL::SSL::SSLContext.new
+ *   ctx.min_version = :TLSv1
+ *   ctx.max_version = :TLSv1_1
+ *
+ *   sock = OpenSSL::SSL::SSLSocket.new(tcp_sock, ctx)
+ *   sock.connect # will negotiate with either TLS 1.0 or TLS 1.1
+ */
+static VALUE
+sslctx_set_min_version(VALUE self, VALUE arg)
+{
+    set_ssl_version_bound(self, arg, ossl_sslctx_get_max_version(self));
+
+    return arg;
+}
+
+/*
+ * call-seq:
+ *   ctx.max_version = :TLSv1_2
+ *   ctx.max_version = nil
+ *
+ * Sets the upper bound on the supported SSL/TLS protocol version. See
+ * SSLContext#min_version= for details.
+ */
+static VALUE
+sslctx_set_max_version(VALUE self, VALUE arg)
+{
+    set_ssl_version_bound(self, ossl_sslctx_get_min_version(self), arg);
+
+    return arg;
 }
 
 static VALUE
@@ -2445,7 +2528,9 @@ Init_ossl_ssl(void)
 
     rb_define_alias(cSSLContext, "ssl_timeout", "timeout");
     rb_define_alias(cSSLContext, "ssl_timeout=", "timeout=");
-    rb_define_method(cSSLContext, "ssl_version=", ossl_sslctx_set_ssl_version, 1);
+    rb_define_method(cSSLContext, "method_mode=", ossl_sslctx_set_method_mode, 1);
+    rb_define_method(cSSLContext, "min_version=", sslctx_set_min_version, 1);
+    rb_define_method(cSSLContext, "max_version=", sslctx_set_max_version, 1);
     rb_define_method(cSSLContext, "ciphers",     ossl_sslctx_get_ciphers, 0);
     rb_define_method(cSSLContext, "ciphers=",    ossl_sslctx_set_ciphers, 1);
     rb_define_method(cSSLContext, "ecdh_curves=", ossl_sslctx_set_ecdh_curves, 1);
@@ -2512,9 +2597,17 @@ Init_ossl_ssl(void)
     rb_define_method(cSSLContext, "options",     ossl_sslctx_get_options, 0);
     rb_define_method(cSSLContext, "options=",     ossl_sslctx_set_options, 1);
 
-    ary = rb_ary_new2(numberof(ossl_ssl_method_tab));
-    for (i = 0; i < numberof(ossl_ssl_method_tab); i++) {
-        rb_ary_push(ary, ID2SYM(rb_intern(ossl_ssl_method_tab[i].name)));
+    ary = rb_ary_new();
+    for (i = 0; i < (int)(sizeof(ssl_version_tab) / sizeof(ssl_version_tab[0])); i++) {
+	const char *base = ssl_version_tab[i].name;
+	char buf[32];
+
+	strcpy(buf, base);
+	rb_ary_push(ary, ID2SYM(rb_intern(buf)));
+	strcpy(buf + strlen(base), "_client");
+	rb_ary_push(ary, ID2SYM(rb_intern(buf)));
+	strcpy(buf + strlen(base), "_server");
+	rb_ary_push(ary, ID2SYM(rb_intern(buf)));
     }
     rb_obj_freeze(ary);
     /* The list of available SSL/TLS methods */

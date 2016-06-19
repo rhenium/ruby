@@ -47,6 +47,23 @@ int HMAC_CTX_copy(HMAC_CTX *out, HMAC_CTX *in);
 		i2d_ASN1_TYPE, V_ASN1_SET, V_ASN1_UNIVERSAL, 0)
 #endif
 
+/* added in 1.0.1 */
+#if !defined(TLS1_1_VERSION)
+#  define TLS1_1_VERSION 0x0302
+#endif
+
+#if !defined(TLS1_2_VERSION)
+#  define TLS1_2_VERSION 0x0303
+#endif
+
+#if !defined(SSL_OP_NO_TLSv1_1)
+#  define SSL_OP_NO_TLSv1_1 0x10000000U
+#endif
+
+#if !defined(SSL_OP_NO_TLSv1_2)
+#  define SSL_OP_NO_TLSv1_2 0x08000000U
+#endif
+
 /* added in 1.0.2 */
 #if !defined(OPENSSL_NO_EC)
 #if !defined(HAVE_EC_CURVE_NIST2NID)
@@ -65,6 +82,11 @@ int EC_curve_nist2nid(const char *);
 
 #if !defined(HAVE_SSL_IS_SERVER)
 #  define SSL_is_server(s) ((s)->server)
+#endif
+
+#if !defined(SSL_OP_NO_SSL_MASK)
+#  define SSL_OP_NO_SSL_MASK (SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | \
+	SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2)
 #endif
 
 /* added in 1.1.0 */
@@ -231,6 +253,12 @@ IMPL_PKEY_GETTER(EC_KEY, ec)
 #if defined(HAVE_AUTHENTICATED_ENCRYPTION) && !defined(EVP_CTRL_AEAD_GET_TAG)
 #  define EVP_CTRL_AEAD_GET_TAG EVP_CTRL_GCM_GET_TAG
 #  define EVP_CTRL_AEAD_SET_TAG EVP_CTRL_GCM_SET_TAG
+#endif
+
+#if !defined(HAVE_TLS_METHOD)
+#  define TLS_method SSLv23_method
+#  define TLS_client_method SSLv23_client_method
+#  define TLS_server_method SSLv23_server_method
 #endif
 
 #endif /* _OSSL_OPENSSL_MISSING_H_ */

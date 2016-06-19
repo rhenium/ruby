@@ -17,7 +17,7 @@ module OpenSSL
   module SSL
     class SSLContext
       DEFAULT_PARAMS = {
-        :ssl_version => "SSLv23",
+        :min_version => "TLSv1",
         :verify_mode => OpenSSL::SSL::VERIFY_PEER,
         :ciphers => %w{
           ECDHE-ECDSA-AES128-GCM-SHA256
@@ -58,7 +58,6 @@ module OpenSSL
           opts = OpenSSL::SSL::OP_ALL
           opts &= ~OpenSSL::SSL::OP_DONT_INSERT_EMPTY_FRAGMENTS
           opts |= OpenSSL::SSL::OP_NO_COMPRESSION if defined?(OpenSSL::SSL::OP_NO_COMPRESSION)
-          opts |= OpenSSL::SSL::OP_NO_SSLv2 | OpenSSL::SSL::OP_NO_SSLv3
           opts
         }.call
       }
@@ -126,6 +125,30 @@ module OpenSSL
           end
         end
         return params
+      end
+
+      # call-seq:
+      #    ctx.ssl_version = :TLSv1
+      #    ctx.ssl_version = "SSLv23_client"
+      #
+      # Sets the SSL/TLS protocol version. See also SSLContext#min_version= and
+      # SSLContext#max_version=.
+      #
+      # You can get a list of valid versions with OpenSSL::SSL::SSLContext::METHODS
+      #
+      # === Note
+      # In Ruby <= 2.3, this method used to be call *_method() functions and set
+      # the return value to the context with SSL_CTX_set_ssl_version(). In the
+      # current version, TLS{_client,_server,}_method() are always used and this
+      # just set the version bound with SSLContext#min_version= and #max_version=.
+      def ssl_version=(version)
+        version = version.to_s
+        if /_(?<mode>client|server)\z/ =~ version
+          version = $`
+          self.method_mode = mode.intern
+        end
+        self.min_version = version
+        self.max_version = version
       end
     end
 

@@ -75,6 +75,7 @@ end
 unless have_macro("OPENSSL_NO_SSL3_METHOD", "openssl/opensslconf.h")
   have_func("SSLv3_method")
 end
+have_func("TLSv1_method")
 have_func("TLSv1_1_method")
 have_func("TLSv1_2_method")
 have_func("RAND_egd")
@@ -147,6 +148,7 @@ have_func("EVP_PKEY_up_ref")
 OpenSSL.check_func_or_macro("SSL_CTX_set_tmp_ecdh_callback", "openssl/ssl.h") # removed
 OpenSSL.check_func_or_macro("SSL_CTX_set_min_proto_version", "openssl/ssl.h")
 have_func("SSL_CTX_get_security_level")
+have_func("TLS_method")
 
 Logging::message "=== Checking done. ===\n"
 
