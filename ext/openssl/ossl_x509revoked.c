@@ -110,6 +110,25 @@ ossl_x509revoked_initialize(int argc, VALUE *argv, VALUE self)
 }
 
 static VALUE
+ossl_x509revoked_initialize_copy(VALUE self, VALUE other)
+{
+    X509_REVOKED *rev, *rev_other, *rev_new;
+
+    rb_check_frozen(self);
+    GetX509Rev(self, rev);
+    SafeGetX509Rev(other, rev_other);
+
+    rev_new = X509_REVOKED_dup(rev_other);
+    if (!rev_new)
+	ossl_raise(eX509RevError, "X509_REVOKED_dup");
+
+    SetX509Rev(self, rev_new);
+    X509_REVOKED_free(rev);
+
+    return self;
+}
+
+static VALUE
 ossl_x509revoked_get_serial(VALUE self)
 {
     X509_REVOKED *rev;
@@ -227,12 +246,19 @@ ossl_x509revoked_add_extension(VALUE self, VALUE ext)
 void
 Init_ossl_x509revoked(void)
 {
+#if 0
+    mOSSL = rb_define_module("OpenSSL");
+    eOSSLError = rb_define_class_under(mOSSL, "OpenSSLError", rb_eStandardError);
+    mX509 = rb_define_module_under(mOSSL, "X509");
+#endif
+
     eX509RevError = rb_define_class_under(mX509, "RevokedError", eOSSLError);
 
     cX509Rev = rb_define_class_under(mX509, "Revoked", rb_cObject);
 
     rb_define_alloc_func(cX509Rev, ossl_x509revoked_alloc);
     rb_define_method(cX509Rev, "initialize", ossl_x509revoked_initialize, -1);
+    rb_define_copy_func(cX509Rev, ossl_x509revoked_initialize_copy);
 
     rb_define_method(cX509Rev, "serial", ossl_x509revoked_get_serial, 0);
     rb_define_method(cX509Rev, "serial=", ossl_x509revoked_set_serial, 1);

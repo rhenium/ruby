@@ -5,16 +5,12 @@ if defined?(OpenSSL::TestUtils)
 
 class OpenSSL::TestCipher < OpenSSL::TestCase
 
+  @ciphers = OpenSSL::Cipher.ciphers
+
   class << self
 
     def has_cipher?(name)
-      ciphers = OpenSSL::Cipher.ciphers
-      # redefine method so we can use the cached ciphers value from the closure
-      # and need not recompute the list each time
-      define_singleton_method :has_cipher? do |name|
-        ciphers.include?(name)
-      end
-      has_cipher?(name)
+      @ciphers.include?(name)
     end
 
     def has_ciphers?(list)
@@ -24,7 +20,7 @@ class OpenSSL::TestCipher < OpenSSL::TestCase
   end
 
   def setup
-    @c1 = OpenSSL::Cipher::Cipher.new("DES-EDE3-CBC")
+    @c1 = OpenSSL::Cipher.new("DES-EDE3-CBC")
     @c2 = OpenSSL::Cipher::DES.new(:EDE3, "CBC")
     @key = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
     @iv = "\0\0\0\0\0\0\0\0"
@@ -118,7 +114,7 @@ class OpenSSL::TestCipher < OpenSSL::TestCase
     OpenSSL::Cipher.ciphers.each{|name|
       next if /netbsd/ =~ RUBY_PLATFORM && /idea|rc5/i =~ name
       begin
-        assert_kind_of(OpenSSL::Cipher::Cipher, OpenSSL::Cipher::Cipher.new(name))
+        assert_kind_of(OpenSSL::Cipher, OpenSSL::Cipher.new(name))
       rescue OpenSSL::Cipher::CipherError => e
         next if /wrap/ =~ name and e.message == 'wrap mode not allowed'
         raise
@@ -245,6 +241,46 @@ class OpenSSL::TestCipher < OpenSSL::TestCase
       assert_raise OpenSSL::Cipher::CipherError do
         decipher.update(ct[0..-2] << ct[-1].succ) + decipher.final
       end
+    end
+
+    def test_aes_gcm_variable_iv_len
+      pt = "You should all use Authenticated Encryption!"
+      cipher = OpenSSL::Cipher.new("aes-128-gcm").encrypt
+      cipher.key = "x" * 16
+      assert_equal(12, cipher.iv_len)
+      cipher.iv = "a" * 12
+      ct1 = cipher.update(pt) << cipher.final
+      tag1 = cipher.auth_tag
+
+      cipher = OpenSSL::Cipher.new("aes-128-gcm").encrypt
+      cipher.key = "x" * 16
+      cipher.iv_len = 10
+      assert_equal(10, cipher.iv_len)
+      cipher.iv = "a" * 10
+      ct2 = cipher.update(pt) << cipher.final
+      tag2 = cipher.auth_tag
+
+      assert_not_equal ct1, ct2
+      assert_not_equal tag1, tag2
+
+      decipher = OpenSSL::Cipher.new("aes-128-gcm").decrypt
+      decipher.auth_tag = tag1
+      decipher.key = "x" * 16
+      decipher.iv_len = 12
+      decipher.iv = "a" * 12
+      assert_equal(pt, decipher.update(ct1) << decipher.final)
+
+      decipher.reset
+      decipher.auth_tag = tag2
+      assert_raise(OpenSSL::Cipher::CipherError) {
+        decipher.update(ct2) << decipher.final
+      }
+
+      decipher.reset
+      decipher.auth_tag = tag2
+      decipher.iv_len = 10
+      decipher.iv = "a" * 10
+      assert_equal(pt, decipher.update(ct2) << decipher.final)
     end
 
   end

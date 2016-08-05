@@ -9,6 +9,7 @@
  */
 #include "ossl.h"
 #include <stdarg.h> /* for ossl_raise */
+#include "ruby/thread_native.h" /* for OpenSSL < 1.1.0 locks */
 
 /*
  * String to HEXString conversion
@@ -77,7 +78,7 @@ STACK_OF(type) *						\
 ossl_protect_##name##_ary2sk(VALUE ary, int *status)		\
 {								\
     return (STACK_OF(type)*)rb_protect(				\
-	    (VALUE(*)_((VALUE)))ossl_##name##_ary2sk0,		\
+	    (VALUE (*)(VALUE))ossl_##name##_ary2sk0,		\
 	    ary,						\
 	    status);						\
 }								\
@@ -136,7 +137,7 @@ ossl_buf2str(char *buf, int len)
     VALUE str;
     int status = 0;
 
-    str = rb_protect((VALUE(*)_((VALUE)))ossl_str_new, len, &status);
+    str = rb_protect((VALUE (*)(VALUE))ossl_str_new, len, &status);
     if(!NIL_P(str)) memcpy(RSTRING_PTR(str), buf, len);
     OPENSSL_free(buf);
     if(status) rb_jump_tag(status);
@@ -242,54 +243,54 @@ ossl_pem_passwd_cb(char *buf, int max_len, int flag, void *pwd_)
 int ossl_store_ctx_ex_verify_cb_idx;
 int ossl_store_ex_verify_cb_idx;
 
-VALUE
+struct ossl_verify_cb_args {
+    VALUE proc;
+    VALUE preverify_ok;
+    VALUE store_ctx;
+};
+
+static VALUE
 ossl_call_verify_cb_proc(struct ossl_verify_cb_args *args)
 {
     return rb_funcall(args->proc, rb_intern("call"), 2,
-                      args->preverify_ok, args->store_ctx);
+		      args->preverify_ok, args->store_ctx);
 }
 
 int
-ossl_verify_cb(int ok, X509_STORE_CTX *ctx)
+ossl_verify_cb_call(VALUE proc, int ok, X509_STORE_CTX *ctx)
 {
-    VALUE proc, rctx, ret;
+    VALUE rctx, ret;
     struct ossl_verify_cb_args args;
-    int state = 0;
+    int state;
 
-    proc = (VALUE)X509_STORE_CTX_get_ex_data(ctx, ossl_store_ctx_ex_verify_cb_idx);
-    if (!proc)
-	proc = (VALUE)X509_STORE_get_ex_data(X509_STORE_CTX_get0_store(ctx), ossl_store_ex_verify_cb_idx);
-    if (!proc)
+    if (NIL_P(proc))
 	return ok;
-    if (!NIL_P(proc)) {
-	ret = Qfalse;
-	rctx = rb_protect((VALUE(*)(VALUE))ossl_x509stctx_new,
-			  (VALUE)ctx, &state);
+
+    ret = Qfalse;
+    rctx = rb_protect((VALUE(*)(VALUE))ossl_x509stctx_new, (VALUE)ctx, &state);
+    if (state) {
+	rb_set_errinfo(Qnil);
+	rb_warn("StoreContext initialization failure");
+    }
+    else {
+	args.proc = proc;
+	args.preverify_ok = ok ? Qtrue : Qfalse;
+	args.store_ctx = rctx;
+	ret = rb_protect((VALUE(*)(VALUE))ossl_call_verify_cb_proc, (VALUE)&args, &state);
 	if (state) {
 	    rb_set_errinfo(Qnil);
-	    rb_warn("StoreContext initialization failure");
+	    rb_warn("exception in verify_callback is ignored");
 	}
-	else {
-	    args.proc = proc;
-	    args.preverify_ok = ok ? Qtrue : Qfalse;
-	    args.store_ctx = rctx;
-	    ret = rb_protect((VALUE(*)(VALUE))ossl_call_verify_cb_proc, (VALUE)&args, &state);
-	    if (state) {
-		rb_set_errinfo(Qnil);
-		rb_warn("exception in verify_callback is ignored");
-	    }
-	    ossl_x509stctx_clear_ptr(rctx);
-	}
-	if (ret == Qtrue) {
-	    X509_STORE_CTX_set_error(ctx, X509_V_OK);
-	    ok = 1;
-	}
-	else{
-	    if (X509_STORE_CTX_get_error(ctx) == X509_V_OK) {
-		X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
-	    }
-	    ok = 0;
-	}
+	ossl_x509stctx_clear_ptr(rctx);
+    }
+    if (ret == Qtrue) {
+	X509_STORE_CTX_set_error(ctx, X509_V_OK);
+	ok = 1;
+    }
+    else {
+	if (X509_STORE_CTX_get_error(ctx) == X509_V_OK)
+	    X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
+	ok = 0;
     }
 
     return ok;
@@ -483,9 +484,8 @@ ossl_debug_set(VALUE self, VALUE val)
  * so otherwise will result in an error.
  *
  * === Examples
- *
- * OpenSSL.fips_mode = true   # turn FIPS mode on
- * OpenSSL.fips_mode = false  # and off again
+ *   OpenSSL.fips_mode = true   # turn FIPS mode on
+ *   OpenSSL.fips_mode = false  # and off again
  */
 static VALUE
 ossl_fips_mode_set(VALUE self, VALUE enabled)
@@ -512,7 +512,6 @@ ossl_fips_mode_set(VALUE self, VALUE enabled)
 /**
  * Stores locks needed for OpenSSL thread safety
  */
-#include "ruby/thread_native.h"
 static rb_nativethread_lock_t *ossl_locks;
 
 static void
@@ -660,10 +659,12 @@ static void Init_ossl_locks(void)
  *
  *   key2 = OpenSSL::PKey::RSA.new File.read 'private_key.pem'
  *   key2.public? # => true
+ *   key2.private? # => true
  *
  * or
  *
  *   key3 = OpenSSL::PKey::RSA.new File.read 'public_key.pem'
+ *   key3.public? # => true
  *   key3.private? # => false
  *
  * === Loading an Encrypted Key
@@ -910,7 +911,7 @@ static void Init_ossl_locks(void)
  *   ca_key = OpenSSL::PKey::RSA.new 2048
  *   pass_phrase = 'my secure pass phrase goes here'
  *
- *   cipher = OpenSSL::Cipher::Cipher.new 'AES-128-CBC'
+ *   cipher = OpenSSL::Cipher.new 'AES-128-CBC'
  *
  *   open 'ca_key.pem', 'w', 0400 do |io|
  *     io.write ca_key.export(cipher, pass_phrase)
@@ -1063,14 +1064,20 @@ static void Init_ossl_locks(void)
  * SSLSocket#connect must be called to initiate the SSL handshake and start
  * encryption.  A key and certificate are not required for the client socket.
  *
+ * Note that SSLSocket#close doesn't close the underlying socket by default. Set
+ * SSLSocket#sync_close to true if you want.
+ *
  *   require 'socket'
  *
  *   tcp_socket = TCPSocket.new 'localhost', 5000
  *   ssl_client = OpenSSL::SSL::SSLSocket.new tcp_socket, context
+ *   ssl_client.sync_close = true
  *   ssl_client.connect
  *
  *   ssl_client.puts "hello server!"
  *   puts ssl_client.gets
+ *
+ *   ssl_client.close # shutdown the TLS connection and close tcp_socket
  *
  * === Peer Verification
  *
@@ -1160,11 +1167,14 @@ Init_openssl(void)
     /*
      * Boolean indicating whether OpenSSL is FIPS-enabled or not
      */
+    rb_define_const(mOSSL, "OPENSSL_FIPS",
 #ifdef OPENSSL_FIPS
-    rb_define_const(mOSSL, "OPENSSL_FIPS", Qtrue);
+		    Qtrue
 #else
-    rb_define_const(mOSSL, "OPENSSL_FIPS", Qfalse);
+		    Qfalse
 #endif
+		   );
+
     rb_define_module_function(mOSSL, "fips_mode=", ossl_fips_mode_set, 1);
 
     /*

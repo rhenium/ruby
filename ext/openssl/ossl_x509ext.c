@@ -225,12 +225,11 @@ ossl_x509extfactory_initialize(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * Array to X509_EXTENSION
- * Structure:
- * ["ln", "value", bool_critical] or
- * ["sn", "value", bool_critical] or
- * ["ln", "critical,value"] or the same for sn
- * ["ln", "value"] => not critical
+ * call-seq:
+ *   ef.create_ext(ln_or_sn, "value", critical = false) -> X509::Extension
+ *   ef.create_ext(ln_or_sn, "critical,value")          -> X509::Extension
+ *
+ * Creates a new X509::Extension with passed values. See also x509v3_config(5).
  */
 static VALUE
 ossl_x509extfactory_create_ext(int argc, VALUE *argv, VALUE self)
@@ -319,6 +318,25 @@ ossl_x509ext_initialize(int argc, VALUE *argv, VALUE self)
     rb_funcall(self, rb_intern("oid="), 1, oid);
     rb_funcall(self, rb_intern("value="), 1, value);
     if(argc > 2) rb_funcall(self, rb_intern("critical="), 1, critical);
+
+    return self;
+}
+
+static VALUE
+ossl_x509ext_initialize_copy(VALUE self, VALUE other)
+{
+    X509_EXTENSION *ext, *ext_other, *ext_new;
+
+    rb_check_frozen(self);
+    GetX509Ext(self, ext);
+    SafeGetX509Ext(other, ext_other);
+
+    ext_new = X509_EXTENSION_dup(ext_other);
+    if (!ext_new)
+	ossl_raise(eX509ExtError, "X509_EXTENSION_dup");
+
+    SetX509Ext(self, ext_new);
+    X509_EXTENSION_free(ext);
 
     return self;
 }
@@ -447,6 +465,12 @@ ossl_x509ext_to_der(VALUE obj)
 void
 Init_ossl_x509ext(void)
 {
+#if 0
+    mOSSL = rb_define_module("OpenSSL");
+    eOSSLError = rb_define_class_under(mOSSL, "OpenSSLError", rb_eStandardError);
+    mX509 = rb_define_module_under(mOSSL, "X509");
+#endif
+
     eX509ExtError = rb_define_class_under(mX509, "ExtensionError", eOSSLError);
 
     cX509ExtFactory = rb_define_class_under(mX509, "ExtensionFactory", rb_cObject);
@@ -470,6 +494,7 @@ Init_ossl_x509ext(void)
     cX509Ext = rb_define_class_under(mX509, "Extension", rb_cObject);
     rb_define_alloc_func(cX509Ext, ossl_x509ext_alloc);
     rb_define_method(cX509Ext, "initialize", ossl_x509ext_initialize, -1);
+    rb_define_copy_func(cX509Ext, ossl_x509ext_initialize_copy);
     rb_define_method(cX509Ext, "oid=", ossl_x509ext_set_oid, 1);
     rb_define_method(cX509Ext, "value=", ossl_x509ext_set_value, 1);
     rb_define_method(cX509Ext, "critical=", ossl_x509ext_set_critical, 1);

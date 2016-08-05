@@ -66,9 +66,9 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
   end
 
   def test_not_started_session
-    skip "non socket argument of SSLSocket.new is not supported on this platform" if /mswin|mingw/ =~ RUBY_PLATFORM
+    pend "non socket argument of SSLSocket.new is not supported on this platform" if /mswin|mingw/ =~ RUBY_PLATFORM
     open(__FILE__) do |f|
-      assert_nil OpenSSL::SSL::SSLSocket.new(f).cert
+      assert_nil EnvUtil.suppress_warning { OpenSSL::SSL::SSLSocket.new(f).cert }
     end
   end
 
@@ -236,6 +236,26 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     }
   end
 
+  def test_client_auth_public_key
+    vflag = OpenSSL::SSL::VERIFY_PEER|OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT
+    start_server(vflag, true, ignore_listener_error: true) do |server, port|
+      assert_raise(ArgumentError) {
+        ctx = OpenSSL::SSL::SSLContext.new
+        ctx.key = @cli_key.public_key
+        ctx.cert = @cli_cert
+        server_connect(port, ctx) { }
+      }
+
+      assert_raise(OpenSSL::SSL::SSLError) {
+        ctx = OpenSSL::SSL::SSLContext.new
+        ctx.client_cert_cb = Proc.new{ |ssl|
+          [@cli_cert, @cli_key.public_key]
+        }
+        server_connect(port, ctx) { }
+      }
+    end
+  end
+
   def test_client_ca
     ctx_proc = Proc.new do |ctx|
       ctx.client_ca = [@ca_cert]
@@ -321,7 +341,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     start_server(OpenSSL::SSL::VERIFY_NONE, true, :ignore_listener_error => true){|server, port|
       sock = TCPSocket.new("127.0.0.1", port)
       ctx = OpenSSL::SSL::SSLContext.new
-      ctx.set_params
+      ctx.verify_mode = OpenSSL::SSL::VERIFY_PEER
       ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
       ssl.sync_close = true
       begin
@@ -335,12 +355,11 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     start_server(OpenSSL::SSL::VERIFY_NONE, true){|server, port|
       sock = TCPSocket.new("127.0.0.1", port)
       ctx = OpenSSL::SSL::SSLContext.new
-      ctx.set_params(
-        :verify_callback => Proc.new do |preverify_ok, store_ctx|
-          store_ctx.error = OpenSSL::X509::V_OK
-          true
-        end
-      )
+      ctx.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      ctx.verify_callback = Proc.new do |preverify_ok, store_ctx|
+        store_ctx.error = OpenSSL::X509::V_OK
+        true
+      end
       ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
       ssl.sync_close = true
       begin
@@ -354,12 +373,11 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     start_server(OpenSSL::SSL::VERIFY_NONE, true, :ignore_listener_error => true){|server, port|
       sock = TCPSocket.new("127.0.0.1", port)
       ctx = OpenSSL::SSL::SSLContext.new
-      ctx.set_params(
-        :verify_callback => Proc.new do |preverify_ok, store_ctx|
-          store_ctx.error = OpenSSL::X509::V_ERR_APPLICATION_VERIFICATION
-          false
-        end
-      )
+      ctx.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      ctx.verify_callback = Proc.new do |preverify_ok, store_ctx|
+        store_ctx.error = OpenSSL::X509::V_ERR_APPLICATION_VERIFICATION
+        false
+      end
       ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
       ssl.sync_close = true
       begin
@@ -375,12 +393,11 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     start_server(OpenSSL::SSL::VERIFY_NONE, true, :ignore_listener_error => true){|server, port|
       sock = TCPSocket.new("127.0.0.1", port)
       ctx = OpenSSL::SSL::SSLContext.new
-      ctx.set_params(
-        :verify_callback => Proc.new do |preverify_ok, store_ctx|
-          store_ctx.error = OpenSSL::X509::V_OK
-          raise RuntimeError
-        end
-      )
+      ctx.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      ctx.verify_callback = Proc.new do |preverify_ok, store_ctx|
+        store_ctx.error = OpenSSL::X509::V_OK
+        raise RuntimeError
+      end
       ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
       ssl.sync_close = true
       begin
@@ -426,9 +443,9 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
       ctx.ciphers = "aNULL"
       ctx.security_level = 0
       server_connect(port, ctx) { |ssl|
-        msg = "Peer verification enabled, but no certificate received. Anonymous cipher suite " \
-          "ADH-AES256-GCM-SHA384 was negotiated. Anonymous suites must be disabled to use peer verification."
-        assert_raise_with_message(sslerr,msg){ssl.post_connection_check("localhost.localdomain")}
+        assert_raise_with_message(sslerr, /anonymous cipher suite/i){
+          ssl.post_connection_check("localhost.localdomain")
+        }
       }
     }
   end if OpenSSL::ExtConfig::TLS_DH_anon_WITH_AES_256_GCM_SHA384
@@ -687,11 +704,11 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     hostname = 'example.org'
 
     ctx3 = OpenSSL::SSL::SSLContext.new
-    ctx3.ciphers = "DH"
+    ctx3.ciphers = "aNULL"
+    ctx3.tmp_dh_callback = proc { OpenSSL::TestUtils::TEST_KEY_DH1024 }
     ctx3.security_level = 0
 
     ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "DH"
     ctx2.servername_cb = lambda { |args| ctx3 }
 
     sock1, sock2 = socketpair
@@ -699,7 +716,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
 
     ctx1 = OpenSSL::SSL::SSLContext.new
-    ctx1.ciphers = "DH"
+    ctx1.ciphers = "aNULL"
     ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
@@ -722,7 +739,8 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     hostname = 'example.org'
 
     ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "DH"
+    ctx2.ciphers = "aNULL"
+    ctx2.tmp_dh_callback = proc { OpenSSL::TestUtils::TEST_KEY_DH1024 }
     ctx2.security_level = 0
     ctx2.servername_cb = lambda { |args| Object.new }
 
@@ -731,7 +749,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
 
     ctx1 = OpenSSL::SSL::SSLContext.new
-    ctx1.ciphers = "DH"
+    ctx1.ciphers = "aNULL"
     ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
@@ -756,12 +774,12 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     hostname = 'example.org'
 
     ctx3 = OpenSSL::SSL::SSLContext.new
-    ctx3.ciphers = "DH"
+    ctx3.ciphers = "aNULL"
+    ctx3.tmp_dh_callback = proc { OpenSSL::TestUtils::TEST_KEY_DH1024 }
     ctx3.security_level = 0
     assert_not_predicate ctx3, :frozen?
 
     ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "DH"
     ctx2.servername_cb = lambda { |args| ctx3 }
 
     sock1, sock2 = socketpair
@@ -769,7 +787,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
 
     ctx1 = OpenSSL::SSL::SSLContext.new
-    ctx1.ciphers = "DH"
+    ctx1.ciphers = "aNULL"
     ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
@@ -791,7 +809,8 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     hostname = 'example.org'
 
     ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "DH"
+    ctx2.ciphers = "aNULL"
+    ctx2.tmp_dh_callback = proc { OpenSSL::TestUtils::TEST_KEY_DH1024 }
     ctx2.security_level = 0
     ctx2.servername_cb = lambda { |args| nil }
 
@@ -800,7 +819,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
 
     ctx1 = OpenSSL::SSL::SSLContext.new
-    ctx1.ciphers = "DH"
+    ctx1.ciphers = "aNULL"
     ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
@@ -823,7 +842,8 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     hostname = 'example.org'
 
     ctx2 = OpenSSL::SSL::SSLContext.new
-    ctx2.ciphers = "DH"
+    ctx2.ciphers = "aNULL"
+    ctx2.tmp_dh_callback = proc { OpenSSL::TestUtils::TEST_KEY_DH1024 }
     ctx2.security_level = 0
     ctx2.servername_cb = lambda do |args|
       cb_socket     = args[0]
@@ -836,7 +856,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     s2 = OpenSSL::SSL::SSLSocket.new(sock2, ctx2)
 
     ctx1 = OpenSSL::SSL::SSLContext.new
-    ctx1.ciphers = "DH"
+    ctx1.ciphers = "aNULL"
     ctx1.security_level = 0
 
     s1 = OpenSSL::SSL::SSLSocket.new(sock1, ctx1)
@@ -859,7 +879,7 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
     return unless OpenSSL::SSL::SSLSocket.instance_methods.include?(:hostname)
 
     ctx_proc = Proc.new do |ctx, ssl|
-      foo_ctx = ctx.dup
+      foo_ctx = OpenSSL::SSL::SSLContext.new
 
       ctx.servername_cb = Proc.new do |ssl2, hostname|
         case hostname
@@ -888,6 +908,53 @@ class OpenSSL::TestSSL < OpenSSL::SSLTestCase
           ssl.puts(str)
           assert_equal(str, ssl.gets)
         }
+      end
+    end
+  end
+
+  def test_verify_hostname_on_connect
+    ctx_proc = proc { |ctx|
+      now = Time.now
+      exts = [
+        ["keyUsage", "keyEncipherment,digitalSignature", true],
+        ["subjectAltName", "DNS:a.example.com,DNS:*.b.example.com," \
+                           "DNS:c*.example.com,DNS:d.*.example.com"],
+      ]
+      ctx.cert = issue_cert(@svr, @svr_key, 4, now, now+1800, exts,
+                            @ca_cert, @ca_key, OpenSSL::Digest::SHA1.new)
+      ctx.key = @svr_key
+    }
+
+    start_server(OpenSSL::SSL::VERIFY_NONE, true, ctx_proc: ctx_proc,
+                 ignore_listener_error: true) do |svr, port|
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.verify_hostname = true
+      ctx.cert_store = OpenSSL::X509::Store.new
+      ctx.cert_store.add_cert(@ca_cert)
+      ctx.verify_mode = OpenSSL::SSL::VERIFY_PEER
+
+      [
+        ["a.example.com", true],
+        ["A.Example.Com", true],
+        ["x.example.com", false],
+        ["b.example.com", false],
+        ["x.b.example.com", true],
+        ["cx.example.com", true],
+        ["d.x.example.com", false],
+      ].each do |name, expected_ok|
+        begin
+          sock = TCPSocket.new("127.0.0.1", port)
+          ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+          ssl.hostname = name
+          if expected_ok
+            assert_nothing_raised { ssl.connect }
+          else
+            assert_raise(OpenSSL::SSL::SSLError) { ssl.connect }
+          end
+        ensure
+          ssl.close if ssl
+          sock.close if sock
+        end
       end
     end
   end
@@ -1182,6 +1249,7 @@ end
     # test it doesn't cause a segmentation fault
     ctx = OpenSSL::SSL::SSLContext.new
     ctx.ciphers = "aNULL"
+    ctx.tmp_dh_callback = proc { OpenSSL::TestUtils::TEST_KEY_DH1024 }
     ctx.security_level = 0
 
     sock1, sock2 = socketpair
@@ -1243,7 +1311,20 @@ end
     # ctx.key = OpenSSL::TestUtils::TEST_KEY_RSA1024
     # ctx.security_level = 2
     # assert_raise(OpenSSL::SSL::SSLError) { ctx.key = OpenSSL::TestUtils::TEST_KEY_RSA1024 }
-    skip "FIXME: SSLContext#key= currently does not raise because SSL_CTX_use_certificate() is delayed"
+    pend "FIXME: SSLContext#key= currently does not raise because SSL_CTX_use_certificate() is delayed"
+  end
+
+  def test_dup
+    ctx = OpenSSL::SSL::SSLContext.new
+    sock1, sock2 = socketpair
+    ssl = OpenSSL::SSL::SSLSocket.new(sock1, ctx)
+
+    assert_raise(NoMethodError) { ctx.dup }
+    assert_raise(NoMethodError) { ssl.dup }
+  ensure
+    ssl.close if ssl
+    sock1.close
+    sock2.close
   end
 
   private
