@@ -29,6 +29,7 @@ class TestWEBrickSSLServer < Test::Unit::TestCase
   def assert_self_signed_cert(config)
     TestWEBrick.start_server(Echo, config){|server, addr, port, log|
       sock = OpenSSL::SSL::SSLSocket.new(TCPSocket.new(addr, port))
+      sock.sync_close = true
       sock.connect
       sock.puts(server.ssl_context.cert.subject.to_s)
       assert_equal("/C=JP/O=www.ruby-lang.org/CN=Ruby\n", sock.gets, log.call)
