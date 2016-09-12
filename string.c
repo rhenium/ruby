@@ -5661,24 +5661,31 @@ rb_str_dump(VALUE str)
     static const char nonascii_suffix[] = ".force_encoding(\"%s\")";
 
     len = 2;			/* "" */
+    if (!rb_enc_asciicompat(enc)) {
+	len += strlen(nonascii_suffix) - rb_strlen_lit("%s");
+	len += strlen(enc->name);
+    }
+
     p = RSTRING_PTR(str); pend = p + RSTRING_LEN(str);
     while (p < pend) {
+	int clen;
 	unsigned char c = *p++;
+
 	switch (c) {
 	  case '"':  case '\\':
 	  case '\n': case '\r':
 	  case '\t': case '\f':
 	  case '\013': case '\010': case '\007': case '\033':
-	    len += 2;
+	    clen = 2;
 	    break;
 
 	  case '#':
-	    len += IS_EVSTR(p, pend) ? 2 : 1;
+	    clen = IS_EVSTR(p, pend) ? 2 : 1;
 	    break;
 
 	  default:
 	    if (ISPRINT(c)) {
-		len++;
+		clen = 1;
 	    }
 	    else {
 		if (u8 && c > 0x7F) {	/* \u notation */
@@ -5686,25 +5693,25 @@ rb_str_dump(VALUE str)
 		    if (MBCLEN_CHARFOUND_P(n)) {
 			unsigned int cc = rb_enc_mbc_to_codepoint(p-1, pend, enc);
 			if (cc <= 0xFFFF)
-			    len += 6;  /* \uXXXX */
+			    clen = 6;  /* \uXXXX */
 			else if (cc <= 0xFFFFF)
-			    len += 9;  /* \u{XXXXX} */
+			    clen = 9;  /* \u{XXXXX} */
 			else
-			    len += 10; /* \u{XXXXXX} */
+			    clen = 10; /* \u{XXXXXX} */
 			p += MBCLEN_CHARFOUND_LEN(n)-1;
 			break;
 		    }
 		}
-		len += 4;	/* \xNN */
+		clen = 4;	/* \xNN */
 	    }
 	    break;
 	}
-    }
-    if (!rb_enc_asciicompat(enc)) {
-	len += strlen(nonascii_suffix) - rb_strlen_lit("%s");
-	len += strlen(enc->name);
-    }
 
+	if (clen > LONG_MAX - len) {
+	    rb_raise(rb_eRuntimeError, "string size too big");
+	}
+	len += clen;
+    }
     result = rb_str_new_with_class(str, 0, len);
     p = RSTRING_PTR(str); pend = p + RSTRING_LEN(str);
     q = RSTRING_PTR(result); qend = q + len + 1;
