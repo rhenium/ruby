@@ -128,7 +128,7 @@ VALUE rb_cSymbol;
 #define RESIZE_CAPA_TERM(str,capacity,termlen) do {\
     if (STR_EMBED_P(str)) {\
 	if ((capacity) > (RSTRING_EMBED_LEN_MAX + 1 - (termlen))) {\
-	    char *const tmp = ALLOC_N(char, (capacity)+termlen);\
+	    char *const tmp = ALLOC_N(char, (size_t)(capacity) + (termlen));\
 	    const long tlen = RSTRING_LEN(str);\
 	    memcpy(tmp, RSTRING_PTR(str), tlen);\
 	    RSTRING(str)->as.heap.ptr = tmp;\
@@ -139,7 +139,7 @@ VALUE rb_cSymbol;
     }\
     else {\
 	assert(!FL_TEST((str), STR_SHARED)); \
-	REALLOC_N(RSTRING(str)->as.heap.ptr, char, (capacity)+termlen);\
+	REALLOC_N(RSTRING(str)->as.heap.ptr, char, (size_t)(capacity) + (termlen));\
 	RSTRING(str)->as.heap.aux.capa = (capacity);\
     }\
 } while (0)
@@ -702,7 +702,7 @@ str_new0(VALUE klass, const char *ptr, long len, int termlen)
     str = str_alloc(klass);
     if (len > (RSTRING_EMBED_LEN_MAX + 1 - termlen)) {
 	RSTRING(str)->as.heap.aux.capa = len;
-	RSTRING(str)->as.heap.ptr = ALLOC_N(char, len + termlen);
+	RSTRING(str)->as.heap.ptr = ALLOC_N(char, (size_t)len + termlen);
 	STR_SET_NOEMBED(str);
     }
     else if (len == 0) {
@@ -1200,7 +1200,7 @@ rb_str_buf_new(long capa)
     }
     FL_SET(str, STR_NOEMBED);
     RSTRING(str)->as.heap.aux.capa = capa;
-    RSTRING(str)->as.heap.ptr = ALLOC_N(char, capa+1);
+    RSTRING(str)->as.heap.ptr = ALLOC_N(char, (size_t)capa + 1);
     RSTRING(str)->as.heap.ptr[0] = '\0';
 
     return str;
@@ -1279,7 +1279,7 @@ str_shared_replace(VALUE str, VALUE str2)
 
     if (RSTRING_LEN(str2) <= (RSTRING_EMBED_LEN_MAX + 1 - termlen)) {
 	STR_SET_EMBED(str);
-	memcpy(RSTRING_PTR(str), RSTRING_PTR(str2), RSTRING_LEN(str2)+termlen);
+	memcpy(RSTRING_PTR(str), RSTRING_PTR(str2), (size_t)RSTRING_LEN(str2) + termlen);
 	STR_SET_EMBED_LEN(str, RSTRING_LEN(str2));
         rb_enc_associate(str, enc);
         ENC_CODERANGE_SET(str, cr);
@@ -1449,10 +1449,10 @@ rb_str_init(int argc, VALUE *argv, VALUE str)
 	    }
 	    str_modifiable(str);
 	    if (STR_EMBED_P(str)) { /* make noembed always */
-		RSTRING(str)->as.heap.ptr = ALLOC_N(char, capa+termlen);
+		RSTRING(str)->as.heap.ptr = ALLOC_N(char, (size_t)capa + termlen);
 	    }
-	    else if (STR_HEAP_SIZE(str) != capa+termlen) {
-		REALLOC_N(RSTRING(str)->as.heap.ptr, char, capa+termlen);
+	    else if (STR_HEAP_SIZE(str) != (size_t)capa + termlen) {
+		REALLOC_N(RSTRING(str)->as.heap.ptr, char, (size_t)capa + termlen);
 	    }
 	    RSTRING(str)->as.heap.len = len;
 	    TERM_FILL(&RSTRING(str)->as.heap.ptr[len], termlen);
@@ -1908,7 +1908,7 @@ str_make_independent_expand(VALUE str, long len, long expand, const int termlen)
 	return;
     }
 
-    ptr = ALLOC_N(char, capa + termlen);
+    ptr = ALLOC_N(char, (size_t)capa + termlen);
     oldptr = RSTRING_PTR(str);
     if (oldptr) {
 	memcpy(ptr, oldptr, len);
@@ -2542,7 +2542,7 @@ rb_str_resize(VALUE str, long len)
 	}
 	else if ((capa = RSTRING(str)->as.heap.aux.capa) < len ||
 		 (capa - len) > (len < 1024 ? len : 1024)) {
-	    REALLOC_N(RSTRING(str)->as.heap.ptr, char, len + termlen);
+	    REALLOC_N(RSTRING(str)->as.heap.ptr, char, (size_t)len + termlen);
 	    RSTRING(str)->as.heap.aux.capa = len;
 	}
 	else if (len == slen) return str;
