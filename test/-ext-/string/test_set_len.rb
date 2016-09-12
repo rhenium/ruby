@@ -23,4 +23,13 @@ class Test_StrSetLen < Test::Unit::TestCase
       assert_equal("abc", @s1.set_len(3))
     }
   end
+
+  def test_capacity_equals_to_new_size
+    bugXXXXX = "[][]"
+    # fill to ensure capacity does not decrease with force_encoding
+    str = Bug::String.new("\x00" * 128, capacity: 128)
+    str.force_encoding("UTF-32BE")
+    assert_equal 128, Bug::String.capacity(str)
+    assert_equal 128, str.set_len(128).bytesize, bugXXXXX
+  end
 end
