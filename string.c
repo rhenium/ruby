@@ -1606,7 +1606,8 @@ rb_enc_strlen_cr(const char *p, const char *e, rb_encoding *enc, int *cr)
 
     *cr = 0;
     if (rb_enc_mbmaxlen(enc) == rb_enc_mbminlen(enc)) {
-	return (e - p + rb_enc_mbminlen(enc) - 1) / rb_enc_mbminlen(enc);
+	return (e - p) / rb_enc_mbminlen(enc) +
+	    !!((e - p) % rb_enc_mbminlen(enc));
     }
     else if (rb_enc_asciicompat(enc)) {
 	c = 0;
