@@ -925,6 +925,9 @@ class TestRegexp < Test::Unit::TestCase
     assert_raise(TypeError) { Regexp.allocate.names }
     assert_raise(TypeError) { Regexp.allocate.named_captures }
 
+    assert_raise(TypeError) { MatchData.allocate.hash }
+    assert_raise(TypeError) { MatchData.allocate.eql? MatchData.allocate }
+    assert_raise(TypeError) { MatchData.allocate == MatchData.allocate }
     assert_raise(TypeError) { MatchData.allocate.regexp }
     assert_raise(TypeError) { MatchData.allocate.names }
     assert_raise(TypeError) { MatchData.allocate.size }
