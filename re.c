@@ -1088,8 +1088,7 @@ match_regexp(VALUE match)
 static VALUE
 match_names(VALUE match)
 {
-    match_check(match);
-    return rb_reg_names(RMATCH(match)->regexp);
+    return rb_reg_names(match_regexp(match));
 }
 
 /*
@@ -1116,9 +1115,8 @@ match_backref_number(VALUE match, VALUE backref)
 {
     const char *name;
     int num;
-
     struct re_registers *regs = RMATCH_REGS(match);
-    VALUE regexp = RMATCH(match)->regexp;
+    VALUE regexp;
 
     match_check(match);
     switch (TYPE(backref)) {
@@ -1134,6 +1132,7 @@ match_backref_number(VALUE match, VALUE backref)
         break;
     }
 
+    regexp = match_regexp(match);
     num = onig_name_to_backref_number(RREGEXP_PTR(regexp),
               (const unsigned char*)name,
               (const unsigned char*)name + strlen(name),
@@ -1918,7 +1917,7 @@ match_ary_aref(VALUE match, VALUE idx, VALUE result)
 static VALUE
 match_aref(int argc, VALUE *argv, VALUE match)
 {
-    VALUE idx, length;
+    VALUE idx, length, regexp;
 
     match_check(match);
     rb_scan_args(argc, argv, "11", &idx, &length);
@@ -1928,7 +1927,9 @@ match_aref(int argc, VALUE *argv, VALUE match)
 	    return rb_reg_nth_match(FIX2INT(idx), match);
 	}
 	else {
-	    int num = namev_to_backref_number(RMATCH_REGS(match), RMATCH(match)->regexp, idx);
+	    int num;
+	    regexp = match_regexp(match);
+	    num = namev_to_backref_number(RMATCH_REGS(match), regexp, idx);
 	    if (num >= 0) {
 		return rb_reg_nth_match(num, match);
 	    }
@@ -1989,7 +1990,8 @@ match_values_at(int argc, VALUE *argv, VALUE match)
 	    rb_ary_push(result, rb_reg_nth_match(FIX2INT(argv[i]), match));
 	}
 	else {
-	    int num = namev_to_backref_number(RMATCH_REGS(match), RMATCH(match)->regexp, argv[i]);
+	    VALUE regexp = match_regexp(match);
+	    int num = namev_to_backref_number(RMATCH_REGS(match), regexp, argv[i]);
 	    if (num >= 0) {
 		rb_ary_push(result, rb_reg_nth_match(num, match));
 	    }
@@ -2078,15 +2080,16 @@ match_named_captures_iter(const OnigUChar *name, const OnigUChar *name_end,
 static VALUE
 match_named_captures(VALUE match)
 {
-    VALUE hash;
+    VALUE hash, regexp;
     struct MEMO *memo;
 
     match_check(match);
+    regexp = match_regexp(match);
 
     hash = rb_hash_new();
     memo = MEMO_NEW(hash, match, 0);
 
-    onig_foreach_name(RREGEXP(RMATCH(match)->regexp)->ptr, match_named_captures_iter, (void*)memo);
+    onig_foreach_name(RREGEXP(regexp)->ptr, match_named_captures_iter, (void*)memo);
 
     return hash;
 }
@@ -2947,12 +2950,14 @@ rb_reg_equal(VALUE re1, VALUE re2)
 static VALUE
 match_hash(VALUE match)
 {
+    VALUE regexp;
     const struct re_registers *regs;
     st_index_t hashval;
 
     match_check(match);
+    regexp = match_regexp(match);
     hashval = rb_hash_start(rb_str_hash(RMATCH(match)->str));
-    hashval = rb_hash_uint(hashval, reg_hash(RMATCH(match)->regexp));
+    hashval = rb_hash_uint(hashval, reg_hash(regexp));
     regs = RMATCH_REGS(match);
     hashval = rb_hash_uint(hashval, regs->num_regs);
     hashval = rb_hash_uint(hashval, rb_memhash(regs->beg, regs->num_regs * sizeof(*regs->beg)));
@@ -2974,11 +2979,15 @@ static VALUE
 match_equal(VALUE match1, VALUE match2)
 {
     const struct re_registers *regs1, *regs2;
+    VALUE reg1, reg2;
+
     if (match1 == match2) return Qtrue;
     if (!RB_TYPE_P(match2, T_MATCH)) return Qfalse;
     if (!RMATCH(match1)->regexp || !RMATCH(match2)->regexp) return Qfalse;
     if (!rb_str_equal(RMATCH(match1)->str, RMATCH(match2)->str)) return Qfalse;
-    if (!rb_reg_equal(RMATCH(match1)->regexp, RMATCH(match2)->regexp)) return Qfalse;
+    reg1 = match_regexp(match1);
+    reg2 = match_regexp(match2);
+    if (!rb_reg_equal(reg1, reg2)) return Qfalse;
     regs1 = RMATCH_REGS(match1);
     regs2 = RMATCH_REGS(match2);
     if (regs1->num_regs != regs2->num_regs) return Qfalse;
