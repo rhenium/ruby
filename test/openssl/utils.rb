@@ -6,6 +6,8 @@ begin
   # where FIPS mode would be enabled by default.
   # Has no effect on all other installations.
   OpenSSL.fips_mode=false
+  STDERR.puts OpenSSL::OPENSSL_LIBRARY_VERSION
+  OpenSSL.debug=true
 rescue LoadError
 end
 

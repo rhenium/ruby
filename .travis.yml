@@ -61,6 +61,7 @@ branches:
     - ruby_2_3
     - /^feature\//
     - /^bug\//
+    - /^wip/
 
 # We want to be notified when something happens.
 notifications:
