@@ -918,7 +918,7 @@ class TestSocket < Test::Unit::TestCase
   def test_tcp_socket_resolv_timeout_with_connection_failure
     opts = %w[-rsocket -W1]
     assert_separately opts, <<~RUBY
-    server = TCPServer.new("127.0.0.1", 12345)
+    server = TCPServer.new("127.0.0.1", 0)
     _, port, = server.addr
 
     Addrinfo.define_singleton_method(:getaddrinfo) do |_, _, family, *_|
